@@ -20,20 +20,16 @@ if (!$site) {
 $stmt = $pdo->prepare("
     SELECT 
         b.*,
-        GROUP_CONCAT(
-            CONCAT(a.name, ' (', ap.phone, ')') 
-            ORDER BY a.name SEPARATOR ', '
-        ) as agents_with_phones
+        a.name as agent_name,
+        ap.phone as agent_phone
     FROM branches b
-    LEFT JOIN agent_branches ab ON b.id = ab.branch_id
-    LEFT JOIN agents a ON ab.agent_id = a.id
+    LEFT JOIN agents a ON b.agent_id = a.id
     LEFT JOIN (
         SELECT agent_id, MIN(phone) as phone 
         FROM agent_phones 
         GROUP BY agent_id
     ) ap ON a.id = ap.agent_id
     WHERE b.site_id = ?
-    GROUP BY b.id
     ORDER BY b.branch_code
 ");
 $stmt->execute([$siteId]);
@@ -82,7 +78,7 @@ include '../includes/header.php';
                 <tr>
                     <th>Branch Code</th>
                     <th>Balance</th>
-                    <th>Assigned Agents</th>
+                    <th>Assigned Agent</th>
                     <th>Last Updated</th>
                 </tr>
             </thead>
@@ -98,7 +94,7 @@ include '../includes/header.php';
                             <td class="<?php echo $branch['balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
                                 <?php echo formatCurrency($branch['balance']); ?>
                             </td>
-                            <td><?php echo htmlspecialchars($branch['agents_with_phones'] ?? 'No agents'); ?></td>
+                            <td><?php echo $branch['agent_name'] ? htmlspecialchars($branch['agent_name'] . ' (' . $branch['agent_phone'] . ')') : 'No agent'; ?></td>
                             <td><?php echo date('d-M-Y H:i', strtotime($branch['updated_at'])); ?></td>
                         </tr>
                     <?php endforeach; ?>

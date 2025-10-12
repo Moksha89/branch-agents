@@ -27,10 +27,9 @@ $stmt = $pdo->prepare("
     SELECT 
         b.*,
         s.name as site_name
-    FROM agent_branches ab
-    JOIN branches b ON ab.branch_id = b.id
+    FROM branches b
     JOIN sites s ON b.site_id = s.id
-    WHERE ab.agent_id = ?
+    WHERE b.agent_id = ?
     ORDER BY s.name, b.branch_code
 ");
 $stmt->execute([$agentId]);

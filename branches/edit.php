@@ -17,9 +17,7 @@ if (!$branch) {
     redirect(SITE_URL . '/branches/index.php');
 }
 
-$stmt = $pdo->prepare("SELECT agent_id FROM agent_branches WHERE branch_id = ?");
-$stmt->execute([$branchId]);
-$assignedAgents = array_column($stmt->fetchAll(), 'agent_id');
+$currentAgentId = $branch['agent_id'];
 
 $error = '';
 $success = '';
@@ -28,39 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $siteId = intval($_POST['site_id']);
     $branchCode = sanitizeInput($_POST['branch_code']);
     $balance = floatval($_POST['balance']);
-    $agents = isset($_POST['agents']) ? $_POST['agents'] : [];
+    $agentId = isset($_POST['agent_id']) && !empty($_POST['agent_id']) ? intval($_POST['agent_id']) : null;
     
     if (empty($siteId) || empty($branchCode)) {
         $error = 'Site and branch code are required';
     } else {
         try {
-            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("UPDATE branches SET site_id = ?, branch_code = ?, balance = ?, agent_id = ? WHERE id = ?");
+            $stmt->execute([$siteId, $branchCode, $balance, $agentId, $branchId]);
             
-            $stmt = $pdo->prepare("UPDATE branches SET site_id = ?, branch_code = ?, balance = ? WHERE id = ?");
-            $stmt->execute([$siteId, $branchCode, $balance, $branchId]);
-            
-            $stmt = $pdo->prepare("DELETE FROM agent_branches WHERE branch_id = ?");
-            $stmt->execute([$branchId]);
-            
-            if (!empty($agents)) {
-                $stmt = $pdo->prepare("INSERT INTO agent_branches (agent_id, branch_id) VALUES (?, ?)");
-                foreach ($agents as $agentId) {
-                    $stmt->execute([$agentId, $branchId]);
-                }
-            }
-            
-            $pdo->commit();
             $success = 'Branch updated successfully';
             
             $stmt = $pdo->prepare("SELECT * FROM branches WHERE id = ?");
             $stmt->execute([$branchId]);
             $branch = $stmt->fetch();
             
-            $stmt = $pdo->prepare("SELECT agent_id FROM agent_branches WHERE branch_id = ?");
-            $stmt->execute([$branchId]);
-            $assignedAgents = array_column($stmt->fetchAll(), 'agent_id');
+            $currentAgentId = $branch['agent_id'];
         } catch (PDOException $e) {
-            $pdo->rollBack();
             $error = 'Error updating branch: ' . $e->getMessage();
         }
     }
@@ -118,22 +100,20 @@ include '../includes/header.php';
             </div>
             
             <div class="form-group">
-                <label>Assign Agents</label>
-                <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px; border-radius: 5px;">
-                    <?php if (empty($allAgents)): ?>
-                        <p>No agents available. <a href="../agents/create.php">Create an agent first</a></p>
-                    <?php else: ?>
+                <label for="agent_id">Assign Agent</label>
+                <select id="agent_id" name="agent_id">
+                    <option value="">No agent</option>
+                    <?php if (!empty($allAgents)): ?>
                         <?php foreach ($allAgents as $agent): ?>
-                            <div>
-                                <label style="font-weight: normal;">
-                                    <input type="checkbox" name="agents[]" value="<?php echo $agent['id']; ?>"
-                                           <?php echo in_array($agent['id'], $assignedAgents) ? 'checked' : ''; ?>>
-                                    <?php echo htmlspecialchars($agent['name']); ?>
-                                </label>
-                            </div>
+                            <option value="<?php echo $agent['id']; ?>"
+                                    <?php echo ($currentAgentId == $agent['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($agent['name']); ?>
+                            </option>
                         <?php endforeach; ?>
+                    <?php else: ?>
+                        <option value="" disabled>No agents available</option>
                     <?php endif; ?>
-                </div>
+                </select>
             </div>
             
             <div class="form-actions">

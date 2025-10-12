@@ -7,12 +7,10 @@ $stmt = $pdo->query("
     SELECT 
         b.*,
         s.name as site_name,
-        GROUP_CONCAT(a.name ORDER BY a.name SEPARATOR ', ') as agents
+        a.name as agent_name
     FROM branches b
     JOIN sites s ON b.site_id = s.id
-    LEFT JOIN agent_branches ab ON b.id = ab.branch_id
-    LEFT JOIN agents a ON ab.agent_id = a.id
-    GROUP BY b.id
+    LEFT JOIN agents a ON b.agent_id = a.id
     ORDER BY s.name, b.branch_code
 ");
 $branches = $stmt->fetchAll();
@@ -34,7 +32,7 @@ include '../includes/header.php';
                     <th>Site</th>
                     <th>Branch Code</th>
                     <th>Balance</th>
-                    <th>Assigned Agents</th>
+                    <th>Assigned Agent</th>
                     <th>Updated</th>
                     <th>Actions</th>
                 </tr>
@@ -56,7 +54,7 @@ include '../includes/header.php';
                                 title="Double-click to edit">
                                 <?php echo formatCurrency($branch['balance']); ?>
                             </td>
-                            <td><?php echo htmlspecialchars($branch['agents'] ?? 'No agents'); ?></td>
+                            <td><?php echo htmlspecialchars($branch['agent_name'] ?? 'No agent'); ?></td>
                             <td><?php echo date('d-M-Y H:i', strtotime($branch['updated_at'])); ?></td>
                             <td>
                                 <a href="edit.php?id=<?php echo $branch['id']; ?>" class="btn btn-sm btn-warning">Edit</a>

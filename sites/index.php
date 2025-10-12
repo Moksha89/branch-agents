@@ -7,11 +7,10 @@ $stmt = $pdo->query("
     SELECT 
         s.*,
         COUNT(DISTINCT b.id) as branch_count,
-        COUNT(DISTINCT ab.agent_id) as agent_count,
+        COUNT(DISTINCT b.agent_id) as agent_count,
         COALESCE(SUM(b.balance), 0) as total_balance
     FROM sites s
     LEFT JOIN branches b ON s.id = b.site_id
-    LEFT JOIN agent_branches ab ON b.id = ab.branch_id
     GROUP BY s.id
     ORDER BY s.name
 ");
