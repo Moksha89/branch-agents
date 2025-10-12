@@ -10,6 +10,11 @@ if (!isLoggedIn()) {
     exit;
 }
 
+if (!isset($_SESSION['whatsapp_session_token']) || empty($_SESSION['whatsapp_session_token'])) {
+    echo json_encode(['success' => false, 'error' => 'WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection.']);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);
     exit;

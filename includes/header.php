@@ -28,8 +28,11 @@
             <a href="<?php echo SITE_URL; ?>/reports/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/') !== false ? 'active' : ''; ?>">
                 <i class="icon-report"></i> Reports
             </a>
-            <a href="<?php echo SITE_URL; ?>/settings/whatsapp.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/') !== false ? 'active' : ''; ?>">
-                <i class="icon-settings"></i> WhatsApp Settings
+            <a href="<?php echo SITE_URL; ?>/settings/whatsapp_web.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/whatsapp_web.php') !== false ? 'active' : ''; ?>">
+                <i class="icon-settings"></i> WhatsApp Connection
+            </a>
+            <a href="<?php echo SITE_URL; ?>/settings/whatsapp.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/whatsapp.php') !== false ? 'active' : ''; ?>">
+                <i class="icon-settings"></i> Settings
             </a>
             <a href="<?php echo SITE_URL; ?>/logout.php" class="nav-item">
                 <i class="icon-logout"></i> Logout

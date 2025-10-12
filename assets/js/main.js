@@ -82,13 +82,9 @@ $(document).ready(function() {
     }
     
     window.sendWhatsApp = function(agentId, agentName) {
-        if (!confirm('Send report to ' + agentName + ' via WhatsApp?')) {
-            return;
-        }
-        
         var $btn = $('button[data-agent-id="' + agentId + '"]');
         var originalText = $btn.html();
-        $btn.html('Sending...').prop('disabled', true);
+        $btn.html('⏳ Sending...').prop('disabled', true);
         
         $.ajax({
             url: SITE_URL + '/api/send_whatsapp.php',
@@ -96,14 +92,14 @@ $(document).ready(function() {
             data: { agent_id: agentId },
             success: function(response) {
                 if (response.success) {
-                    showNotification('WhatsApp message sent successfully', 'success');
+                    showNotification('✓ Report sent to ' + agentName + ' successfully via WhatsApp!', 'success');
                 } else {
-                    showNotification('Error: ' + response.error, 'error');
+                    showNotification('✗ Error: ' + response.error, 'error');
                 }
                 $btn.html(originalText).prop('disabled', false);
             },
             error: function() {
-                showNotification('Error sending WhatsApp message', 'error');
+                showNotification('✗ Error sending report. Please check your WhatsApp connection.', 'error');
                 $btn.html(originalText).prop('disabled', false);
             }
         });
