@@ -5,23 +5,24 @@
 }
 
 :root {
-    --primary-color: #007bff;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
-    --warning-color: #ffc107;
-    --info-color: #17a2b8;
-    --dark-color: #343a40;
-    --light-color: #f8f9fa;
+    --primary-color: #4F46E5;
+    --secondary-color: #6B7280;
+    --success-color: #10B981;
+    --danger-color: #EF4444;
+    --warning-color: #F59E0B;
+    --info-color: #6366F1;
+    --dark-color: #1F2937;
+    --light-color: #F9FAFB;
     --sidebar-width: 250px;
     --topbar-height: 60px;
 }
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 14px;
-    color: #333;
-    background: #f5f7fa;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #374151;
+    background: #F3F4F6;
 }
 
 .login-page {
@@ -73,21 +74,25 @@ body {
     top: 0;
     width: var(--sidebar-width);
     height: 100vh;
-    background: var(--dark-color);
+    background: linear-gradient(180deg, #1F2937 0%, #111827 100%);
     color: white;
     overflow-y: auto;
     z-index: 1000;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
 }
 
 .sidebar-header {
-    padding: 20px;
+    padding: 24px 20px;
     background: rgba(0,0,0,0.2);
     text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .sidebar-header h2 {
     font-size: 24px;
+    font-weight: 700;
     margin: 0;
+    letter-spacing: -0.01em;
 }
 
 .sidebar-nav {
@@ -96,21 +101,31 @@ body {
 
 .nav-item {
     display: block;
-    padding: 15px 20px;
-    color: #adb5bd;
+    padding: 14px 20px;
+    color: #9CA3AF;
     text-decoration: none;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
 }
 
-.nav-item:hover,
-.nav-item.active {
-    background: rgba(255,255,255,0.1);
+.nav-item:hover {
+    background: rgba(255,255,255,0.08);
     color: white;
-    border-left: 3px solid var(--primary-color);
+    border-left-color: var(--primary-color);
+    padding-left: 23px;
+}
+
+.nav-item.active {
+    background: rgba(79, 70, 229, 0.2);
+    color: white;
+    border-left-color: var(--primary-color);
+    padding-left: 23px;
 }
 
 .nav-item i {
-    margin-right: 10px;
+    margin-right: 12px;
     width: 20px;
     display: inline-block;
 }
@@ -150,24 +165,32 @@ body {
 }
 
 .content-wrapper {
-    padding: 30px;
+    padding: 40px;
 }
 
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 32px;
 }
 
 .page-header h1 {
-    font-size: 28px;
+    font-size: 32px;
+    font-weight: 700;
     color: var(--dark-color);
+    letter-spacing: -0.02em;
 }
 
 .page-header p {
-    color: #666;
-    margin-top: 5px;
+    color: #6B7280;
+    margin-top: 8px;
+    font-size: 15px;
+}
+
+.page-header .subtitle {
+    color: #6B7280;
+    font-size: 15px;
 }
 
 .btn {
@@ -178,9 +201,19 @@ body {
     text-align: center;
     text-decoration: none;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn:active {
+    transform: translateY(0);
 }
 
 .btn-primary {
@@ -189,7 +222,7 @@ body {
 }
 
 .btn-primary:hover {
-    background: #0056b3;
+    background: #4338CA;
 }
 
 .btn-secondary {
@@ -197,9 +230,17 @@ body {
     color: white;
 }
 
+.btn-secondary:hover {
+    background: #4B5563;
+}
+
 .btn-success {
     background: var(--success-color);
     color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
 }
 
 .btn-danger {
@@ -207,14 +248,26 @@ body {
     color: white;
 }
 
+.btn-danger:hover {
+    background: #DC2626;
+}
+
 .btn-warning {
     background: var(--warning-color);
-    color: #212529;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #D97706;
 }
 
 .btn-info {
     background: var(--info-color);
     color: white;
+}
+
+.btn-info:hover {
+    background: #4F46E5;
 }
 
 .btn-sm {
@@ -236,56 +289,67 @@ body {
 
 .stat-card {
     background: white;
-    border-radius: 10px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 24px;
     display: flex;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
 }
 
 .stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 10px;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 28px;
     color: white;
-    margin-right: 15px;
+    margin-right: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .bg-blue {
-    background: var(--primary-color);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .bg-green {
-    background: var(--success-color);
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
 }
 
 .bg-orange {
-    background: var(--warning-color);
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
 }
 
 .bg-purple {
-    background: #6f42c1;
+    background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
 }
 
 .stat-details h3 {
-    font-size: 28px;
+    font-size: 32px;
+    font-weight: 700;
     margin-bottom: 5px;
+    color: #1F2937;
 }
 
 .stat-details p {
-    color: #666;
+    color: #6B7280;
     font-size: 14px;
+    font-weight: 500;
 }
 
 .table-responsive {
     background: white;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
     overflow-x: auto;
 }
 
@@ -295,20 +359,39 @@ body {
 }
 
 .table th {
-    background: var(--light-color);
-    padding: 12px;
+    background: #F9FAFB;
+    padding: 16px;
     text-align: left;
     font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6B7280;
+    border-bottom: 2px solid #E5E7EB;
 }
 
 .table td {
-    padding: 12px;
-    border-bottom: 1px solid #dee2e6;
+    padding: 16px;
+    border-bottom: 1px solid #F3F4F6;
+    color: #374151;
+    font-size: 14px;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:nth-child(even) {
+    background: #F9FAFB;
 }
 
 .table tbody tr:hover {
-    background: #f8f9fa;
+    background: #EEF2FF;
+    cursor: pointer;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 .text-center {
@@ -326,56 +409,78 @@ body {
 }
 
 .alert {
-    padding: 15px;
-    border-radius: 5px;
+    padding: 16px 20px;
+    border-radius: 8px;
     margin-bottom: 20px;
+    border-left: 4px solid;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .alert-success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: #D1FAE5;
+    color: #065F46;
+    border-left-color: #10B981;
 }
 
 .alert-error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: #FEE2E2;
+    color: #991B1B;
+    border-left-color: #EF4444;
 }
 
 .alert-warning {
-    background: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeaa7;
+    background: #FEF3C7;
+    color: #92400E;
+    border-left-color: #F59E0B;
+}
+
+.alert-info {
+    background: #DBEAFE;
+    color: #1E40AF;
+    border-left-color: #3B82F6;
+}
+
+.alert strong {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.alert p {
+    margin: 4px 0;
 }
 
 .form-container {
     background: white;
-    border-radius: 10px;
-    padding: 30px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
     max-width: 600px;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     font-weight: 500;
-    color: #333;
+    color: #374151;
+    font-size: 14px;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 5px;
+    padding: 12px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 8px;
     font-size: 14px;
+    transition: all 0.2s ease;
+    background: white;
+    color: #374151;
 }
 
 .form-group input:focus,
@@ -383,7 +488,24 @@ body {
 .form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #9CA3AF;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 6px;
+    color: #6B7280;
+    font-size: 13px;
+}
+
+.form-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
 }
 
 .form-actions {
@@ -450,27 +572,33 @@ body {
 
 .editable {
     cursor: pointer;
-    padding: 5px;
-    border-radius: 3px;
-    transition: background 0.3s;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
 
 .editable:hover {
-    background: #f8f9fa;
+    background: #EEF2FF;
+    box-shadow: 0 0 0 2px #C7D2FE;
 }
 
 .whatsapp-btn {
     background: #25D366;
     color: white;
     border: none;
-    padding: 8px 15px;
-    border-radius: 5px;
+    padding: 10px 18px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .whatsapp-btn:hover {
     background: #128C7E;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .badge {
