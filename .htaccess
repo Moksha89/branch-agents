@@ -1,0 +1,31 @@
+# Enable RewriteEngine
+RewriteEngine On
+
+# Force HTTPS (uncomment in production)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Block access to sensitive files
+<FilesMatch "(^\.htaccess|^config\.php|^database\.php|^whatsapp\.php)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory browsing
+Options -Indexes
+
+# Custom error pages
+ErrorDocument 404 /404.php
+ErrorDocument 403 /403.php
+
+# Set default timezone
+php_value date.timezone "Asia/Kolkata"
+
+# Increase upload size limits
+php_value upload_max_filesize 20M
+php_value post_max_size 20M
+
+# Security headers
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-XSS-Protection "1; mode=block"
+Header set X-Content-Type-Options "nosniff"
