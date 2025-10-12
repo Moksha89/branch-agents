@@ -2,7 +2,7 @@
 
 session_start();
 
-define('SITE_URL', 'http://localhost/hisaab');
+define('SITE_URL', 'http://localhost:8000');
 define('SITE_NAME', 'Hisaab Portal');
 
 date_default_timezone_set('Asia/Kolkata');
