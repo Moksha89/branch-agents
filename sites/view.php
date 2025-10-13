@@ -74,22 +74,22 @@ include '../includes/header.php';
     
     <div class="table-responsive">
         <h2>Branches</h2>
-        <table class="table data-table" id="branchesTable">
-            <thead>
-                <tr>
-                    <th>Branch Code</th>
-                    <th>Balance</th>
-                    <th>Assigned Agent</th>
-                    <th>Last Updated</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($branches)): ?>
+        <?php if (empty($branches)): ?>
+            <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                <p style="color: #6B7280; font-size: 14px;">No branches found. Click the "+ Create Branch" button above to add one.</p>
+            </div>
+        <?php else: ?>
+            <table class="table data-table" id="branchesTable">
+                <thead>
                     <tr>
-                        <td colspan="5" class="text-center">No branches found. Click the "+ Create Branch" button above to add one.</td>
+                        <th>Branch Code</th>
+                        <th>Balance</th>
+                        <th>Assigned Agent</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
                     </tr>
-                <?php else: ?>
+                </thead>
+                <tbody>
                     <?php foreach ($branches as $branch): ?>
                         <tr data-branch-id="<?php echo $branch['id']; ?>">
                             <td><strong><?php echo htmlspecialchars($branch['branch_code']); ?></strong></td>
@@ -115,20 +115,18 @@ include '../includes/header.php';
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-            <?php if (!empty($branches)): ?>
-            <tfoot>
-                <tr style="background: #f8f9fa; font-weight: bold;">
-                    <td>TOTAL</td>
-                    <td class="<?php echo $totalBalance < 0 ? 'text-danger' : 'text-success'; ?>">
-                        <?php echo formatCurrency($totalBalance); ?>
-                    </td>
-                    <td colspan="3"></td>
-                </tr>
-            </tfoot>
-            <?php endif; ?>
-        </table>
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f8f9fa; font-weight: bold;">
+                        <td>TOTAL</td>
+                        <td class="<?php echo $totalBalance < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <?php echo formatCurrency($totalBalance); ?>
+                        </td>
+                        <td colspan="3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        <?php endif; ?>
     </div>
 </div>
 
