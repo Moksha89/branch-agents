@@ -294,7 +294,7 @@ async function disconnectWhatsApp() {
         
         const data = await response.json();
         
-        if (data.status === 'success') {
+        if (data.status === 'success' || response.ok) {
             localStorage.removeItem('whatsapp_session_token');
             sessionToken = null;
             
@@ -305,7 +305,7 @@ async function disconnectWhatsApp() {
             alert('WhatsApp disconnected successfully');
             location.reload();
         } else {
-            alert('Error disconnecting: ' + data.message);
+            alert('Error disconnecting: ' + (data.message || 'Unknown error'));
         }
     } catch (error) {
         alert('Error: ' + error.message);

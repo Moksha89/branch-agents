@@ -54,8 +54,11 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
             <a href="<?php echo SITE_URL; ?>/agents/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/agents/') !== false ? 'active' : ''; ?>">
                 <i class="icon-agent"></i> Agents
             </a>
-            <a href="<?php echo SITE_URL; ?>/reports/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/') !== false ? 'active' : ''; ?>">
+            <a href="<?php echo SITE_URL; ?>/reports/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/index.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-report"></i> Reports
+            </a>
+            <a href="<?php echo SITE_URL; ?>/reports/message_log.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/message_log.php') !== false ? 'active' : ''; ?>">
+                <i class="icon-report"></i> Message Log
             </a>
             <a href="<?php echo SITE_URL; ?>/settings/whatsapp_web.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/whatsapp_web.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-settings"></i> WhatsApp Connection
