@@ -6,6 +6,8 @@ requireLogin();
 $error = '';
 $success = '';
 
+$preSelectedSiteId = isset($_GET['site_id']) ? intval($_GET['site_id']) : 0;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $siteId = intval($_POST['site_id']);
     $branchCode = sanitizeInput($_POST['branch_code']);
@@ -54,15 +56,18 @@ include '../includes/header.php';
         <form method="POST" action="">
             <div class="form-group">
                 <label for="site_id">Site *</label>
-                <select id="site_id" name="site_id" required>
+                <select id="site_id" name="site_id" required <?php echo $preSelectedSiteId > 0 ? 'disabled' : ''; ?>>
                     <option value="">Select Site</option>
                     <?php foreach ($sites as $site): ?>
                         <option value="<?php echo $site['id']; ?>" 
-                                <?php echo (isset($_POST['site_id']) && $_POST['site_id'] == $site['id']) ? 'selected' : ''; ?>>
+                                <?php echo ($preSelectedSiteId == $site['id'] || (isset($_POST['site_id']) && $_POST['site_id'] == $site['id'])) ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($site['name']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <?php if ($preSelectedSiteId > 0): ?>
+                    <input type="hidden" name="site_id" value="<?php echo $preSelectedSiteId; ?>">
+                <?php endif; ?>
                 <?php if (empty($sites)): ?>
                     <small><a href="../sites/create.php">Create a site first</a></small>
                 <?php endif; ?>

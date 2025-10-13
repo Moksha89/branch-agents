@@ -35,7 +35,7 @@ include '../includes/header.php';
     </div>
     
     <div class="table-responsive">
-        <table class="table">
+        <table class="table data-table">
             <thead>
                 <tr>
                     <th>Agent Name</th>
@@ -69,15 +69,19 @@ include '../includes/header.php';
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                    <tr style="background: #f8f9fa; font-weight: bold;">
-                        <td colspan="4" class="text-right">GRAND TOTAL:</td>
-                        <td class="<?php echo $grandTotal < 0 ? 'text-danger' : 'text-success'; ?>">
-                            <?php echo formatCurrency($grandTotal); ?>
-                        </td>
-                        <td></td>
-                    </tr>
                 <?php endif; ?>
             </tbody>
+            <?php if (!empty($agentReports)): ?>
+            <tfoot>
+                <tr style="background: #f8f9fa; font-weight: bold;">
+                    <td colspan="4" class="text-right">GRAND TOTAL:</td>
+                    <td class="<?php echo $grandTotal < 0 ? 'text-danger' : 'text-success'; ?>">
+                        <?php echo formatCurrency($grandTotal); ?>
+                    </td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            <?php endif; ?>
         </table>
     </div>
 </div>

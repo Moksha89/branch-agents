@@ -26,7 +26,7 @@ include '../includes/header.php';
     </div>
     
     <div class="table-responsive">
-        <table class="table" id="sitesTable">
+        <table class="table data-table" id="sitesTable">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -56,9 +56,6 @@ include '../includes/header.php';
                             <td><?php echo date('d-M-Y', strtotime($site['created_at'])); ?></td>
                             <td>
                                 <a href="view.php?id=<?php echo $site['id']; ?>" class="btn btn-sm btn-info">View</a>
-                                <a href="edit.php?id=<?php echo $site['id']; ?>" class="btn btn-sm btn-warning">Edit</a>
-                                <a href="delete.php?id=<?php echo $site['id']; ?>" class="btn btn-sm btn-danger" 
-                                   onclick="return confirm('Are you sure you want to delete this site? All branches will also be deleted.')">Delete</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

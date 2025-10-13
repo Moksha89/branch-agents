@@ -27,7 +27,7 @@ include '../includes/header.php';
     </div>
     
     <div class="table-responsive">
-        <table class="table">
+        <table class="table data-table">
             <thead>
                 <tr>
                     <th>ID</th>
