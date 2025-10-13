@@ -2,7 +2,10 @@
 
 session_start();
 
-define('SITE_URL', 'http://localhost:8000');
+// Auto-detect site URL based on environment
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost:8000';
+define('SITE_URL', $protocol . '://' . $host);
 define('SITE_NAME', 'Hisaab Portal');
 
 date_default_timezone_set('Asia/Kolkata');

@@ -3,11 +3,10 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
-$stmt = $pdo->prepare("SELECT whatsapp_api_url, whatsapp_api_key FROM admins WHERE id = ?");
-$stmt->execute([$_SESSION['admin_id']]);
+$stmt = $pdo->query("SELECT * FROM whatsapp_config WHERE id = 1");
 $config = $stmt->fetch();
-$apiUrl = $config['whatsapp_api_url'] ?? '';
-$apiKey = $config['whatsapp_api_key'] ?? '';
+$apiUrl = $config['api_url'] ?? '';
+$apiKey = $config['api_key'] ?? '';
 
 $error = '';
 $success = '';
@@ -18,11 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     
     try {
         $stmt = $pdo->prepare("
-            UPDATE admins 
-            SET whatsapp_api_url = ?, whatsapp_api_key = ? 
-            WHERE id = ?
+            UPDATE whatsapp_config 
+            SET api_url = ?, api_key = ?, is_active = 1 
+            WHERE id = 1
         ");
-        $stmt->execute([$newApiUrl, $newApiKey, $_SESSION['admin_id']]);
+        $stmt->execute([$newApiUrl, $newApiKey]);
         $success = 'WhatsApp API configuration saved successfully';
         $apiUrl = $newApiUrl;
         $apiKey = $newApiKey;
@@ -130,6 +129,7 @@ include '../includes/header.php';
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 <script>
+const SITE_URL = '<?php echo SITE_URL; ?>';
 const API_URL = '<?php echo rtrim($apiUrl, '/'); ?>';
 const API_KEY = '<?php echo $apiKey; ?>';
 const SESSION_ID = 'hisaab_portal';
