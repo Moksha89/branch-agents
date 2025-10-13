@@ -3,10 +3,11 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
-$stmt = $pdo->query("SELECT * FROM whatsapp_config WHERE id = 1");
+$stmt = $pdo->prepare("SELECT whatsapp_api_url, whatsapp_api_key FROM admins WHERE id = ?");
+$stmt->execute([$_SESSION['admin_id']]);
 $config = $stmt->fetch();
-$apiUrl = $config['api_url'] ?? '';
-$apiKey = $config['api_key'] ?? '';
+$apiUrl = $config['whatsapp_api_url'] ?? '';
+$apiKey = $config['whatsapp_api_key'] ?? '';
 
 $error = '';
 $success = '';
@@ -17,11 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     
     try {
         $stmt = $pdo->prepare("
-            UPDATE whatsapp_config 
-            SET api_url = ?, api_key = ?, is_active = 1 
-            WHERE id = 1
+            UPDATE admins 
+            SET whatsapp_api_url = ?, whatsapp_api_key = ? 
+            WHERE id = ?
         ");
-        $stmt->execute([$newApiUrl, $newApiKey]);
+        $stmt->execute([$newApiUrl, $newApiKey, $_SESSION['admin_id']]);
         $success = 'WhatsApp API configuration saved successfully';
         $apiUrl = $newApiUrl;
         $apiKey = $newApiKey;

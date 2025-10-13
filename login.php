@@ -2,6 +2,11 @@
 require_once 'config/config.php';
 require_once 'config/database.php';
 
+$stmt = $pdo->query("SELECT * FROM portal_settings WHERE id = 1");
+$portalSettings = $stmt->fetch();
+$portalName = $portalSettings ? $portalSettings['portal_name'] : 'Hisaab Portal';
+$logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' . $portalSettings['logo_path'] : null;
+
 if (isLoggedIn()) {
     redirect(SITE_URL . '/dashboard.php');
 }
@@ -30,14 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - <?php echo SITE_NAME; ?></title>
+    <title>Login - <?php echo htmlspecialchars($portalName); ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="login-page">
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <h1>Hisaab</h1>
+                <?php if ($logoPath): ?>
+                    <img src="<?php echo $logoPath; ?>" alt="Logo" style="max-width: 200px; max-height: 80px; margin-bottom: 15px;">
+                <?php endif; ?>
+                <h1><?php echo htmlspecialchars($portalName); ?></h1>
                 <p>Portal Management System</p>
             </div>
             
