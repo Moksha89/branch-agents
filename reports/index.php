@@ -8,16 +8,24 @@ $stmt = $pdo->query("
         a.id,
         a.name as agent_name,
         GROUP_CONCAT(DISTINCT ap.phone ORDER BY ap.is_primary DESC SEPARATOR ', ') as phones,
-        COUNT(DISTINCT b.id) as branch_count,
-        GROUP_CONCAT(DISTINCT
-            CONCAT(s.name, ' - ', b.branch_code, ': ', b.balance) 
-            ORDER BY s.name, b.branch_code SEPARATOR ' | '
-        ) as branch_details,
-        COALESCE(SUM(b.balance), 0) as total_balance
+        COALESCE(branch_data.branch_count, 0) as branch_count,
+        branch_data.branch_details,
+        COALESCE(branch_data.total_balance, 0) as total_balance
     FROM agents a
     LEFT JOIN agent_phones ap ON a.id = ap.agent_id
-    LEFT JOIN branches b ON b.agent_id = a.id
-    LEFT JOIN sites s ON b.site_id = s.id
+    LEFT JOIN (
+        SELECT 
+            b.agent_id,
+            COUNT(b.id) as branch_count,
+            GROUP_CONCAT(DISTINCT
+                CONCAT(s.name, ' - ', b.branch_code, ': ', b.balance) 
+                ORDER BY s.name, b.branch_code SEPARATOR ' | '
+            ) as branch_details,
+            SUM(b.balance) as total_balance
+        FROM branches b
+        LEFT JOIN sites s ON b.site_id = s.id
+        GROUP BY b.agent_id
+    ) branch_data ON a.id = branch_data.agent_id
     WHERE a.is_active = TRUE
     GROUP BY a.id
     ORDER BY total_balance DESC
