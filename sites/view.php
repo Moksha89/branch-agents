@@ -111,7 +111,7 @@ include '../includes/header.php';
                             <td><?php echo date('d-M-Y H:i', strtotime($branch['updated_at'])); ?></td>
                             <td>
                                 <button class="btn btn-sm btn-warning" onclick="editBalance(<?php echo $branch['id']; ?>)">✏️ Edit Amount</button>
-                                <a href="../branches/edit.php?id=<?php echo $branch['id']; ?>" class="btn btn-sm btn-info">Edit Branch</a>
+                                <button class="btn btn-sm btn-info" onclick="showEditBranchModal(<?php echo $branch['id']; ?>, '<?php echo htmlspecialchars($branch['branch_code'], ENT_QUOTES); ?>', <?php echo $branch['balance']; ?>, <?php echo $branch['site_id']; ?>, <?php echo $branch['agent_id'] ? $branch['agent_id'] : 'null'; ?>)">Edit Branch</button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -213,6 +213,61 @@ include '../includes/header.php';
             <div style="text-align: right; margin-top: 20px;">
                 <button type="button" class="btn btn-secondary" onclick="closeBulkUpdateModal()">Cancel</button>
                 <button type="submit" class="btn btn-success">💰 Update All</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Branch Modal -->
+<div id="editBranchModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Branch</h2>
+            <span class="modal-close" onclick="closeEditBranchModal()">&times;</span>
+        </div>
+        <form id="editBranchForm">
+            <input type="hidden" id="edit_branch_id" name="branch_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit_site_id">Site *</label>
+                    <select id="edit_site_id" name="site_id" required class="form-control">
+                        <option value="">Select Site</option>
+                        <?php
+                        $sitesStmt = $pdo->query("SELECT id, name FROM sites ORDER BY name");
+                        while ($siteOption = $sitesStmt->fetch()) {
+                            echo '<option value="'.$siteOption['id'].'">'.htmlspecialchars($siteOption['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_branch_code">Branch Code *</label>
+                    <input type="text" id="edit_branch_code" name="branch_code" required 
+                           placeholder="e.g., BR001, BR002" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_balance">Balance *</label>
+                    <input type="number" id="edit_balance" name="balance" step="0.01" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_agent_id">Assign Agent (Optional)</label>
+                    <select id="edit_agent_id" name="agent_id" class="form-control">
+                        <option value="">-- No Agent --</option>
+                        <?php
+                        $agentsStmt = $pdo->query("SELECT id, name FROM agents ORDER BY name");
+                        while ($agent = $agentsStmt->fetch()) {
+                            echo '<option value="'.$agent['id'].'">'.htmlspecialchars($agent['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditBranchModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Branch</button>
             </div>
         </form>
     </div>
@@ -346,6 +401,52 @@ $('#createBranchForm').on('submit', function(e) {
     });
 });
 
+function showEditBranchModal(branchId, branchCode, balance, siteId, agentId) {
+    document.getElementById('edit_branch_id').value = branchId;
+    document.getElementById('edit_branch_code').value = branchCode;
+    document.getElementById('edit_balance').value = balance;
+    document.getElementById('edit_site_id').value = siteId;
+    document.getElementById('edit_agent_id').value = agentId || '';
+    
+    document.getElementById('editBranchModal').style.display = 'block';
+    document.getElementById('edit_branch_code').focus();
+}
+
+function closeEditBranchModal() {
+    document.getElementById('editBranchModal').style.display = 'none';
+    document.getElementById('editBranchForm').reset();
+}
+
+$('#editBranchForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    const $submitBtn = $(this).find('button[type="submit"]');
+    const originalText = $submitBtn.text();
+    
+    $submitBtn.text('Updating...').prop('disabled', true);
+    
+    $.ajax({
+        url: SITE_URL + '/api/update_branch.php',
+        method: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Branch updated successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to update branch'));
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        },
+        error: function() {
+            alert('✗ Error updating branch. Please try again.');
+            $submitBtn.text(originalText).prop('disabled', false);
+        }
+    });
+});
+
 window.onclick = function(event) {
     const branchModal = document.getElementById('createBranchModal');
     if (event.target == branchModal) {
@@ -354,6 +455,10 @@ window.onclick = function(event) {
     const bulkModal = document.getElementById('bulkUpdateModal');
     if (event.target == bulkModal) {
         closeBulkUpdateModal();
+    }
+    const editModal = document.getElementById('editBranchModal');
+    if (event.target == editModal) {
+        closeEditBranchModal();
     }
 }
 </script>
