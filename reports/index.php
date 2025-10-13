@@ -8,9 +8,9 @@ $stmt = $pdo->query("
         a.id,
         a.name as agent_name,
         GROUP_CONCAT(DISTINCT ap.phone ORDER BY ap.is_primary DESC SEPARATOR ', ') as phones,
-        COALESCE(branch_data.branch_count, 0) as branch_count,
-        branch_data.branch_details,
-        COALESCE(branch_data.total_balance, 0) as total_balance
+        COALESCE(MAX(branch_data.branch_count), 0) as branch_count,
+        MAX(branch_data.branch_details) as branch_details,
+        COALESCE(MAX(branch_data.total_balance), 0) as total_balance
     FROM agents a
     LEFT JOIN agent_phones ap ON a.id = ap.agent_id
     LEFT JOIN (

@@ -5,10 +5,14 @@ requireLogin();
 
 $stmt = $pdo->query("
     SELECT 
-        a.*,
+        a.id,
+        a.name,
+        a.is_active,
+        a.created_at,
+        a.updated_at,
         GROUP_CONCAT(DISTINCT ap.phone ORDER BY ap.is_primary DESC SEPARATOR ', ') as phones,
-        COALESCE(branch_data.branch_count, 0) as branch_count,
-        COALESCE(branch_data.total_balance, 0) as total_balance
+        COALESCE(MAX(branch_data.branch_count), 0) as branch_count,
+        COALESCE(MAX(branch_data.total_balance), 0) as total_balance
     FROM agents a
     LEFT JOIN agent_phones ap ON a.id = ap.agent_id
     LEFT JOIN (
