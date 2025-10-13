@@ -90,13 +90,40 @@ include '../includes/header.php';
 const SITE_URL = '<?php echo SITE_URL; ?>';
 
 function sendAllReports() {
+    const whatsappToken = localStorage.getItem('whatsapp_session_token');
+    if (!whatsappToken) {
+        alert('❌ WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection first.');
+        return;
+    }
+    
     if (!confirm('Send reports to all agents via WhatsApp?')) {
         return;
     }
     
+    $.ajax({
+        url: SITE_URL + '/api/save_whatsapp_token.php',
+        method: 'POST',
+        data: { session_token: whatsappToken },
+        success: function() {
+            proceedWithBulkSend();
+        },
+        error: function() {
+            alert('❌ Failed to sync WhatsApp session. Please try again.');
+        }
+    });
+}
+
+function proceedWithBulkSend() {
     const agentIds = <?php echo json_encode(array_column($agentReports, 'id')); ?>;
     let completed = 0;
     let failed = 0;
+    let failedAgents = [];
+    
+    const progressMsg = document.createElement('div');
+    progressMsg.id = 'bulk-send-progress';
+    progressMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #007bff; color: white; padding: 15px 20px; border-radius: 4px; z-index: 10000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
+    progressMsg.innerHTML = '<strong>📱 Sending reports...</strong><br>Progress: 0/' + agentIds.length;
+    document.body.appendChild(progressMsg);
     
     agentIds.forEach((agentId, index) => {
         setTimeout(() => {
@@ -104,26 +131,46 @@ function sendAllReports() {
                 url: SITE_URL + '/api/send_whatsapp.php',
                 method: 'POST',
                 data: { agent_id: agentId },
+                dataType: 'json',
                 success: function(response) {
                     if (response.success) {
                         completed++;
                     } else {
                         failed++;
+                        failedAgents.push({ id: agentId, error: response.error });
                     }
-                    
-                    if (completed + failed === agentIds.length) {
-                        alert('Completed: ' + completed + ' messages sent, ' + failed + ' failed.');
-                    }
+                    updateProgress();
                 },
-                error: function() {
+                error: function(xhr) {
                     failed++;
-                    if (completed + failed === agentIds.length) {
-                        alert('Completed: ' + completed + ' messages sent, ' + failed + ' failed.');
-                    }
+                    let errorMsg = 'Network error';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMsg = response.error || errorMsg;
+                    } catch(e) {}
+                    failedAgents.push({ id: agentId, error: errorMsg });
+                    updateProgress();
                 }
             });
         }, index * 2000);
     });
+    
+    function updateProgress() {
+        progressMsg.innerHTML = '<strong>📱 Sending reports...</strong><br>Progress: ' + (completed + failed) + '/' + agentIds.length;
+        
+        if (completed + failed === agentIds.length) {
+            document.body.removeChild(progressMsg);
+            
+            let message = '✅ Completed: ' + completed + ' messages sent';
+            if (failed > 0) {
+                message += '\n❌ Failed: ' + failed + ' messages';
+                if (failedAgents.length > 0) {
+                    message += '\n\nFailed agents:\n' + failedAgents.map(a => '- Agent ID ' + a.id + ': ' + a.error).join('\n');
+                }
+            }
+            alert(message);
+        }
+    }
 }
 </script>
 

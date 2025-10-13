@@ -11,7 +11,7 @@ if (!isLoggedIn()) {
 }
 
 if (!isset($_SESSION['whatsapp_session_token']) || empty($_SESSION['whatsapp_session_token'])) {
-    echo json_encode(['success' => false, 'error' => 'WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection.']);
+    echo json_encode(['success' => false, 'error' => 'WhatsApp session token not found. Please refresh the page and try again, or reconnect WhatsApp in Settings.']);
     exit;
 }
 

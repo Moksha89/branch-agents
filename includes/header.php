@@ -14,6 +14,24 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+    // Auto-sync WhatsApp token from localStorage to PHP session on every page load
+    (function() {
+        const whatsappToken = localStorage.getItem('whatsapp_session_token');
+        if (whatsappToken) {
+            // Sync token to PHP session immediately on page load
+            $.ajax({
+                url: '<?php echo SITE_URL; ?>/api/save_whatsapp_token.php',
+                method: 'POST',
+                data: { session_token: whatsappToken },
+                async: false,
+                error: function() {
+                    console.error('Failed to sync WhatsApp token to session');
+                }
+            });
+        }
+    })();
+    </script>
 </head>
 <body>
     <div class="sidebar">
