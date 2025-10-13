@@ -305,30 +305,26 @@ async function disconnectWhatsApp() {
     }
     
     try {
-        const response = await fetch(`${API_URL}/api/v1/sessions/${SESSION_ID}`, {
-            method: 'DELETE',
+        const response = await fetch(SITE_URL + '/api/disconnect_whatsapp.php', {
+            method: 'POST',
             headers: {
-                'Authorization': `Bearer ${sessionToken}`
+                'Content-Type': 'application/json'
             }
         });
         
         const data = await response.json();
         
-        if (data.status === 'success' || response.ok) {
+        if (data.success) {
             localStorage.removeItem('whatsapp_session_token');
             sessionToken = null;
             
-            $.post(SITE_URL + '/api/save_whatsapp_token.php', { 
-                session_token: '' 
-            });
-            
-            alert('WhatsApp disconnected successfully');
+            alert('✅ ' + data.message);
             location.reload();
         } else {
-            alert('Error disconnecting: ' + (data.message || 'Unknown error'));
+            alert('❌ Error disconnecting: ' + (data.error || 'Unknown error'));
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     }
 }
 
