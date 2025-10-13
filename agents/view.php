@@ -65,7 +65,7 @@ include '../includes/header.php';
         </div>
         
         <div class="stat-card">
-            <div class="stat-icon <?php echo $totalBalance < 0 ? 'bg-danger' : 'bg-purple'; ?>">
+            <div class="stat-icon <?php echo $totalBalance < 0 ? 'bg-purple' : 'bg-danger'; ?>">
                 <i class="icon-money"></i>
             </div>
             <div class="stat-details">
@@ -101,7 +101,7 @@ include '../includes/header.php';
                         <tr>
                             <td><?php echo htmlspecialchars($branch['site_name']); ?></td>
                             <td><strong><?php echo htmlspecialchars($branch['branch_code']); ?></strong></td>
-                            <td class="<?php echo $branch['balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $branch['balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <?php echo formatCurrency($branch['balance']); ?>
                             </td>
                             <td><?php echo date('d-M-Y H:i', strtotime($branch['updated_at'])); ?></td>
@@ -109,7 +109,7 @@ include '../includes/header.php';
                     <?php endforeach; ?>
                     <tr style="background: #f8f9fa; font-weight: bold;">
                         <td colspan="2">TOTAL</td>
-                        <td class="<?php echo $totalBalance < 0 ? 'text-danger' : 'text-success'; ?>">
+                        <td class="<?php echo $totalBalance < 0 ? 'text-success' : 'text-danger'; ?>">
                             <?php echo formatCurrency($totalBalance); ?>
                         </td>
                         <td></td>

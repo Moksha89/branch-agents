@@ -94,7 +94,7 @@ include '../includes/header.php';
                         <tr data-branch-id="<?php echo $branch['id']; ?>">
                             <td><strong><?php echo htmlspecialchars($branch['branch_code']); ?></strong></td>
                             <td>
-                                <span class="balance-display <?php echo $branch['balance'] < 0 ? 'text-danger' : 'text-success'; ?>" 
+                                <span class="balance-display <?php echo $branch['balance'] < 0 ? 'text-success' : 'text-danger'; ?>" 
                                       id="balance-display-<?php echo $branch['id']; ?>">
                                     <?php echo formatCurrency($branch['balance']); ?>
                                 </span>
@@ -119,7 +119,7 @@ include '../includes/header.php';
                 <tfoot>
                     <tr style="background: #f8f9fa; font-weight: bold;">
                         <td>TOTAL</td>
-                        <td class="<?php echo $totalBalance < 0 ? 'text-danger' : 'text-success'; ?>">
+                        <td class="<?php echo $totalBalance < 0 ? 'text-success' : 'text-danger'; ?>">
                             <?php echo formatCurrency($totalBalance); ?>
                         </td>
                         <td colspan="3"></td>
@@ -197,7 +197,7 @@ include '../includes/header.php';
                     <?php foreach ($branches as $branch): ?>
                         <tr>
                             <td><strong><?php echo htmlspecialchars($branch['branch_code']); ?></strong></td>
-                            <td class="<?php echo $branch['balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $branch['balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <?php echo formatCurrency($branch['balance']); ?>
                             </td>
                             <td>

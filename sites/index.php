@@ -50,7 +50,7 @@ include '../includes/header.php';
                             <td><strong><?php echo htmlspecialchars($site['name']); ?></strong></td>
                             <td><?php echo $site['branch_count']; ?></td>
                             <td><?php echo $site['agent_count']; ?></td>
-                            <td class="<?php echo $site['total_balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $site['total_balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <?php echo formatCurrency($site['total_balance']); ?>
                             </td>
                             <td><?php echo date('d-M-Y', strtotime($site['created_at'])); ?></td>

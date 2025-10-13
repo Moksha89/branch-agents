@@ -43,7 +43,7 @@ $(document).ready(function() {
                 if (response.success) {
                     $element.html(formatCurrency(newBalance));
                     $element.removeClass('text-danger text-success');
-                    $element.addClass(newBalance < 0 ? 'text-danger' : 'text-success');
+                    $element.addClass(newBalance < 0 ? 'text-success' : 'text-danger');
                     
                     showNotification('Balance updated successfully', 'success');
                     

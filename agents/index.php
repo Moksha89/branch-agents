@@ -56,7 +56,7 @@ include '../includes/header.php';
                             </td>
                             <td><?php echo htmlspecialchars($agent['phones'] ?? 'No phone'); ?></td>
                             <td><?php echo $agent['branch_count']; ?></td>
-                            <td class="<?php echo $agent['total_balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $agent['total_balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <?php echo formatCurrency($agent['total_balance']); ?>
                             </td>
                             <td>

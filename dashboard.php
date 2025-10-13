@@ -97,7 +97,7 @@ include 'includes/header.php';
                             <tr>
                                 <td><?php echo htmlspecialchars($site['site_name']); ?></td>
                                 <td><?php echo $site['branch_count']; ?></td>
-                                <td class="<?php echo $site['total_balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                                <td class="<?php echo $site['total_balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                     <?php echo formatCurrency($site['total_balance']); ?>
                                 </td>
                             </tr>

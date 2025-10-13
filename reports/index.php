@@ -66,7 +66,7 @@ include '../includes/header.php';
                             <td><?php echo htmlspecialchars($report['phones'] ?? 'No phone'); ?></td>
                             <td><?php echo $report['branch_count']; ?></td>
                             <td style="font-size: 12px;"><?php echo htmlspecialchars($report['branch_details'] ?? 'No branches'); ?></td>
-                            <td class="<?php echo $report['total_balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $report['total_balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <strong><?php echo formatCurrency($report['total_balance']); ?></strong>
                             </td>
                             <td>
@@ -83,7 +83,7 @@ include '../includes/header.php';
             <tfoot>
                 <tr style="background: #f8f9fa; font-weight: bold;">
                     <td colspan="4" class="text-right">GRAND TOTAL:</td>
-                    <td class="<?php echo $grandTotal < 0 ? 'text-danger' : 'text-success'; ?>">
+                    <td class="<?php echo $grandTotal < 0 ? 'text-success' : 'text-danger'; ?>">
                         <?php echo formatCurrency($grandTotal); ?>
                     </td>
                     <td></td>

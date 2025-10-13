@@ -47,7 +47,7 @@ include '../includes/header.php';
                             <td><?php echo $branch['id']; ?></td>
                             <td><?php echo htmlspecialchars($branch['site_name']); ?></td>
                             <td><strong><?php echo htmlspecialchars($branch['branch_code']); ?></strong></td>
-                            <td class="<?php echo $branch['balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $branch['balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <?php echo formatCurrency($branch['balance']); ?>
                             </td>
                             <td><?php echo htmlspecialchars($branch['agent_name'] ?? 'No agent'); ?></td>
