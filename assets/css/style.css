@@ -400,12 +400,12 @@ body {
     text-align: center;
 }
 
-.text-success {
+td.text-success {
     color: var(--success-color);
     font-weight: 600;
 }
 
-.text-danger {
+td.text-danger {
     color: var(--danger-color);
     font-weight: 600;
 }
