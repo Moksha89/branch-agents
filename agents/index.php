@@ -23,7 +23,7 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Agents Management</h1>
-        <a href="create.php" class="btn btn-primary">+ Create New Agent</a>
+        <button onclick="showCreateAgentModal()" class="btn btn-primary">+ Create New Agent</button>
     </div>
     
     <div class="table-responsive">
@@ -71,8 +71,126 @@ include '../includes/header.php';
     </div>
 </div>
 
+<div id="createAgentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Agent</h2>
+            <span class="modal-close" onclick="closeCreateAgentModal()">&times;</span>
+        </div>
+        <form id="createAgentForm">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="agent_name">Agent Name *</label>
+                    <input type="text" id="agent_name" name="name" required 
+                           placeholder="e.g., John Doe">
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone Numbers *</label>
+                    <div id="phoneNumbersContainer">
+                        <div class="phone-number-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" name="phones[]" required 
+                                   placeholder="Enter phone number" 
+                                   style="flex: 1;">
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="primary_index" value="0" checked>
+                                <span>Primary</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addPhoneNumber()">+ Add Phone Number</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateAgentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Agent</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const SITE_URL = '<?php echo SITE_URL; ?>';
+let phoneNumberIndex = 1;
+
+function showCreateAgentModal() {
+    document.getElementById('createAgentModal').style.display = 'block';
+    document.getElementById('agent_name').focus();
+}
+
+function closeCreateAgentModal() {
+    document.getElementById('createAgentModal').style.display = 'none';
+    document.getElementById('createAgentForm').reset();
+    const container = document.getElementById('phoneNumbersContainer');
+    container.innerHTML = `
+        <div class="phone-number-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type="text" name="phones[]" required 
+                   placeholder="Enter phone number" 
+                   style="flex: 1;">
+            <label style="display: flex; align-items: center; gap: 5px;">
+                <input type="radio" name="primary_index" value="0" checked>
+                <span>Primary</span>
+            </label>
+        </div>
+    `;
+    phoneNumberIndex = 1;
+}
+
+function addPhoneNumber() {
+    const container = document.getElementById('phoneNumbersContainer');
+    const newRow = document.createElement('div');
+    newRow.className = 'phone-number-row';
+    newRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+    newRow.innerHTML = `
+        <input type="text" name="phones[]" required 
+               placeholder="Enter phone number" 
+               style="flex: 1;">
+        <label style="display: flex; align-items: center; gap: 5px;">
+            <input type="radio" name="primary_index" value="${phoneNumberIndex}">
+            <span>Primary</span>
+        </label>
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✗</button>
+    `;
+    container.appendChild(newRow);
+    phoneNumberIndex++;
+}
+
+window.onclick = function(event) {
+    const agentModal = document.getElementById('createAgentModal');
+    if (event.target == agentModal) {
+        closeCreateAgentModal();
+    }
+}
+
+$('#createAgentForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    const $submitBtn = $(this).find('button[type="submit"]');
+    const originalText = $submitBtn.text();
+    
+    $submitBtn.text('Creating...').prop('disabled', true);
+    
+    $.ajax({
+        url: SITE_URL + '/api/create_agent.php',
+        method: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Agent created successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to create agent'));
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        },
+        error: function() {
+            alert('✗ Error creating agent. Please try again.');
+            $submitBtn.text(originalText).prop('disabled', false);
+        }
+    });
+});
 </script>
 
 <?php include '../includes/footer.php'; ?>

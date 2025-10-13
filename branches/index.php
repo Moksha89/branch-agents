@@ -21,7 +21,7 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Branches Management</h1>
-        <a href="create.php" class="btn btn-primary">+ Create New Branch</a>
+        <button onclick="showCreateBranchModal()" class="btn btn-primary">+ Create New Branch</button>
     </div>
     
     <div class="table-responsive">
@@ -59,5 +59,109 @@ include '../includes/header.php';
         </table>
     </div>
 </div>
+
+<div id="createBranchModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Branch</h2>
+            <span class="modal-close" onclick="closeCreateBranchModal()">&times;</span>
+        </div>
+        <form id="createBranchForm">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="site_id">Site *</label>
+                    <select id="site_id" name="site_id" required>
+                        <option value="">-- Select Site --</option>
+                        <?php
+                        $sitesStmt = $pdo->query("SELECT id, name FROM sites ORDER BY name");
+                        while ($site = $sitesStmt->fetch()) {
+                            echo '<option value="'.$site['id'].'">'.htmlspecialchars($site['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="branch_code">Branch Code *</label>
+                    <input type="text" id="branch_code" name="branch_code" required 
+                           placeholder="e.g., BR001, BR002">
+                </div>
+                
+                <div class="form-group">
+                    <label for="balance">Initial Balance *</label>
+                    <input type="number" id="balance" name="balance" step="0.01" required value="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="agent_id">Assign Agent (Optional)</label>
+                    <select id="agent_id" name="agent_id">
+                        <option value="">-- No Agent --</option>
+                        <?php
+                        $agentsStmt = $pdo->query("SELECT id, name FROM agents ORDER BY name");
+                        while ($agent = $agentsStmt->fetch()) {
+                            echo '<option value="'.$agent['id'].'">'.htmlspecialchars($agent['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateBranchModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Branch</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const SITE_URL = '<?php echo SITE_URL; ?>';
+
+function showCreateBranchModal() {
+    document.getElementById('createBranchModal').style.display = 'block';
+    document.getElementById('site_id').focus();
+}
+
+function closeCreateBranchModal() {
+    document.getElementById('createBranchModal').style.display = 'none';
+    document.getElementById('createBranchForm').reset();
+}
+
+window.onclick = function(event) {
+    const branchModal = document.getElementById('createBranchModal');
+    if (event.target == branchModal) {
+        closeCreateBranchModal();
+    }
+}
+
+$('#createBranchForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    const $submitBtn = $(this).find('button[type="submit"]');
+    const originalText = $submitBtn.text();
+    
+    $submitBtn.text('Creating...').prop('disabled', true);
+    
+    $.ajax({
+        url: SITE_URL + '/api/create_branch.php',
+        method: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Branch created successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to create branch'));
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        },
+        error: function() {
+            alert('✗ Error creating branch. Please try again.');
+            $submitBtn.text(originalText).prop('disabled', false);
+        }
+    });
+});
+</script>
 
 <?php include '../includes/footer.php'; ?>

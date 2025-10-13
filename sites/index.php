@@ -22,7 +22,7 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Sites Management</h1>
-        <a href="create.php" class="btn btn-primary">+ Create New Site</a>
+        <button onclick="showCreateSiteModal()" class="btn btn-primary">+ Create New Site</button>
     </div>
     
     <div class="table-responsive">
@@ -41,7 +41,7 @@ include '../includes/header.php';
             <tbody>
                 <?php if (empty($sites)): ?>
                     <tr>
-                        <td colspan="7" class="text-center">No sites found. <a href="create.php">Create your first site</a></td>
+                        <td colspan="7" class="text-center">No sites found. <a href="javascript:void(0)" onclick="showCreateSiteModal()">Create your first site</a></td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($sites as $site): ?>
@@ -64,5 +64,78 @@ include '../includes/header.php';
         </table>
     </div>
 </div>
+
+<div id="createSiteModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Site</h2>
+            <span class="modal-close" onclick="closeCreateSiteModal()">&times;</span>
+        </div>
+        <form id="createSiteForm">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="site_name">Site Name *</label>
+                    <input type="text" id="site_name" name="name" required 
+                           placeholder="e.g., JAI, KALKI, VVBOOK">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateSiteModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Site</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const SITE_URL = '<?php echo SITE_URL; ?>';
+
+function showCreateSiteModal() {
+    document.getElementById('createSiteModal').style.display = 'block';
+    document.getElementById('site_name').focus();
+}
+
+function closeCreateSiteModal() {
+    document.getElementById('createSiteModal').style.display = 'none';
+    document.getElementById('createSiteForm').reset();
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('createSiteModal');
+    if (event.target == modal) {
+        closeCreateSiteModal();
+    }
+}
+
+$('#createSiteForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    const $submitBtn = $(this).find('button[type="submit"]');
+    const originalText = $submitBtn.text();
+    
+    $submitBtn.text('Creating...').prop('disabled', true);
+    
+    $.ajax({
+        url: SITE_URL + '/api/create_site.php',
+        method: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Site created successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to create site'));
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        },
+        error: function() {
+            alert('✗ Error creating site. Please try again.');
+            $submitBtn.text(originalText).prop('disabled', false);
+        }
+    });
+});
+</script>
 
 <?php include '../includes/footer.php'; ?>
