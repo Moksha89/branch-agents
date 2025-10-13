@@ -185,6 +185,19 @@ async function createSession() {
     btn.innerHTML = '<i class="icon">⏳</i> Creating session...';
     
     try {
+        if (sessionToken) {
+            try {
+                await fetch(`${API_URL}/api/v1/sessions/${SESSION_ID}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${sessionToken}`
+                    }
+                });
+            } catch (e) {
+                console.log('No existing session to delete or delete failed:', e);
+            }
+        }
+        
         const response = await fetch(`${API_URL}/api/v1/sessions`, {
             method: 'POST',
             headers: {
@@ -204,7 +217,6 @@ async function createSession() {
                 session_token: sessionToken 
             });
             
-            alert('Session created! Waiting for QR code...');
             startStatusChecking();
         } else {
             alert('Error creating session: ' + data.message);
@@ -265,6 +277,14 @@ async function checkStatus() {
             }, function (error) {
                 if (error) console.error(error);
             });
+        } else if (session.status === 'DISCONNECTED' || session.status === 'CLOSED') {
+            statusText.textContent = 'Disconnected';
+            statusText.style.background = '#dc3545';
+            statusDetail.textContent = 'WhatsApp connection was closed. Click "Reconnect WhatsApp" to connect again.';
+            document.getElementById('qr-code-section').style.display = 'none';
+            document.getElementById('connected-section').style.display = 'none';
+            document.getElementById('connect-btn').style.display = 'inline-block';
+            document.getElementById('connect-btn').innerHTML = '<i class="icon">🔗</i> Reconnect WhatsApp';
         } else {
             statusText.textContent = session.status || 'Initializing';
             statusText.style.background = '#17a2b8';
