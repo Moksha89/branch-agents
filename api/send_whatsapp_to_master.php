@@ -10,11 +10,6 @@ if (!isLoggedIn()) {
     exit;
 }
 
-if (!isset($_SESSION['whatsapp_session_token']) || empty($_SESSION['whatsapp_session_token'])) {
-    echo json_encode(['success' => false, 'error' => 'WhatsApp session token not found. Please refresh the page and try again, or reconnect WhatsApp in Settings.']);
-    exit;
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);
     exit;
