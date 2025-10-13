@@ -31,13 +31,19 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Agent Reports</h1>
-        <button onclick="sendAllReports()" class="btn btn-success">📱 Send All Reports to WhatsApp</button>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="sendSelectedReports()" class="btn btn-primary" id="send-selected-btn" disabled>📱 Send to Selected Agents</button>
+            <button onclick="sendAllReports()" class="btn btn-success">📱 Send All Reports to WhatsApp</button>
+        </div>
     </div>
     
     <div class="table-responsive">
         <table class="table data-table">
             <thead>
                 <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+                    </th>
                     <th>Agent Name</th>
                     <th>Phone Numbers</th>
                     <th>Branches</th>
@@ -49,11 +55,12 @@ include '../includes/header.php';
             <tbody>
                 <?php if (empty($agentReports)): ?>
                     <tr>
-                        <td colspan="6" class="text-center">No reports available</td>
+                        <td colspan="7" class="text-center">No reports available</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($agentReports as $report): ?>
                         <tr>
+                            <td><input type="checkbox" class="agent-checkbox" value="<?php echo $report['id']; ?>" onchange="updateSelectedCount()"></td>
                             <td><strong><?php echo htmlspecialchars($report['agent_name']); ?></strong></td>
                             <td><?php echo htmlspecialchars($report['phones'] ?? 'No phone'); ?></td>
                             <td><?php echo $report['branch_count']; ?></td>
@@ -89,6 +96,56 @@ include '../includes/header.php';
 <script>
 const SITE_URL = '<?php echo SITE_URL; ?>';
 
+function toggleSelectAll(checkbox) {
+    const agentCheckboxes = document.querySelectorAll('.agent-checkbox');
+    agentCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const selectedCheckboxes = document.querySelectorAll('.agent-checkbox:checked');
+    const sendSelectedBtn = document.getElementById('send-selected-btn');
+    
+    if (selectedCheckboxes.length > 0) {
+        sendSelectedBtn.disabled = false;
+        sendSelectedBtn.textContent = `📱 Send to Selected Agents (${selectedCheckboxes.length})`;
+    } else {
+        sendSelectedBtn.disabled = true;
+        sendSelectedBtn.textContent = '📱 Send to Selected Agents';
+    }
+}
+
+function sendSelectedReports() {
+    const selectedCheckboxes = document.querySelectorAll('.agent-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one agent');
+        return;
+    }
+    
+    const whatsappToken = localStorage.getItem('whatsapp_session_token');
+    if (!whatsappToken) {
+        alert('❌ WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection first.');
+        return;
+    }
+    
+    if (!confirm(`Send reports to ${selectedCheckboxes.length} selected agent(s) via WhatsApp?`)) {
+        return;
+    }
+    
+    $.ajax({
+        url: SITE_URL + '/api/save_whatsapp_token.php',
+        method: 'POST',
+        data: { session_token: whatsappToken },
+        success: function() {
+            const selectedAgentIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+            proceedWithBulkSend(selectedAgentIds);
+        },
+        error: function() {
+            alert('❌ Failed to sync WhatsApp session. Please try again.');
+        }
+    });
+}
+
 function sendAllReports() {
     const whatsappToken = localStorage.getItem('whatsapp_session_token');
     if (!whatsappToken) {
@@ -113,8 +170,63 @@ function sendAllReports() {
     });
 }
 
-function proceedWithBulkSend() {
-    const agentIds = <?php echo json_encode(array_column($agentReports, 'id')); ?>;
+function sendWhatsApp(agentId, agentName) {
+    const whatsappToken = localStorage.getItem('whatsapp_session_token');
+    if (!whatsappToken) {
+        alert('❌ WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection first.');
+        return;
+    }
+    
+    const button = document.querySelector(`.whatsapp-btn[data-agent-id="${agentId}"]`);
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Sending...';
+    button.disabled = true;
+    
+    $.ajax({
+        url: SITE_URL + '/api/save_whatsapp_token.php',
+        method: 'POST',
+        data: { session_token: whatsappToken },
+        success: function() {
+            $.ajax({
+                url: SITE_URL + '/api/send_whatsapp.php',
+                method: 'POST',
+                data: { agent_id: agentId },
+                dataType: 'json',
+                success: function(response) {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    
+                    if (response.success) {
+                        alert('✅ Report sent successfully to ' + agentName);
+                    } else {
+                        alert('❌ Failed to send report: ' + (response.error || 'Unknown error'));
+                    }
+                },
+                error: function(xhr) {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    
+                    let errorMsg = 'Network error';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMsg = response.error || errorMsg;
+                    } catch(e) {}
+                    alert('❌ Failed to send report: ' + errorMsg);
+                }
+            });
+        },
+        error: function() {
+            button.innerHTML = originalText;
+            button.disabled = false;
+            alert('❌ Failed to sync WhatsApp session. Please try again.');
+        }
+    });
+}
+
+function proceedWithBulkSend(agentIds = null) {
+    if (!agentIds) {
+        agentIds = <?php echo json_encode(array_column($agentReports, 'id')); ?>;
+    }
     let completed = 0;
     let failed = 0;
     let failedAgents = [];

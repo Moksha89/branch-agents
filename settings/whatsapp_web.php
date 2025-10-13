@@ -30,6 +30,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_templates'])) {
+    $headerTemplate = sanitizeInput($_POST['header_template']);
+    $footerTemplate = sanitizeInput($_POST['footer_template']);
+    
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE whatsapp_config 
+            SET header_template = ?, footer_template = ? 
+            WHERE id = 1
+        ");
+        $stmt->execute([$headerTemplate, $footerTemplate]);
+        $success = 'Message templates saved successfully';
+    } catch (PDOException $e) {
+        $error = 'Error saving templates: ' . $e->getMessage();
+    }
+}
+
 include '../includes/header.php';
 ?>
 
@@ -118,6 +135,31 @@ include '../includes/header.php';
                 <i class="icon">🔄</i> Refresh Status
             </button>
         </div>
+    </div>
+    
+    <div class="form-container" style="margin-top: 30px;">
+        <h3>📝 Message Templates</h3>
+        <p class="text-muted">Customize the header and footer of WhatsApp reports. Use placeholders: {agent}, {total}, {date}, {time}</p>
+        
+        <form method="POST" id="template-form">
+            <div class="form-group">
+                <label for="header_template">Header Template</label>
+                <textarea id="header_template" name="header_template" rows="3" 
+                          placeholder="Hey {agent}, this is a reminder about your balance to be cleared."><?php echo htmlspecialchars($config['header_template'] ?? ''); ?></textarea>
+                <small>Use {agent} for agent name, {date} for current date, {time} for current time</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="footer_template">Footer Template</label>
+                <textarea id="footer_template" name="footer_template" rows="3" 
+                          placeholder="Please contact us if you have any questions. Thank you!"><?php echo htmlspecialchars($config['footer_template'] ?? ''); ?></textarea>
+                <small>Custom footer message for all reports</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" name="save_templates" class="btn btn-primary">Save Templates</button>
+            </div>
+        </form>
     </div>
     <?php else: ?>
         <div class="alert alert-warning">

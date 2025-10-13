@@ -58,7 +58,9 @@ try {
         exit;
     }
     
-    $result = sendWhatsAppMessage($phone['phone'], $message);
+    $imagePath = generateBranchDetailsPNG($agentId);
+    
+    $result = sendWhatsAppMessage($phone['phone'], $message, $imagePath);
     
     if ($result['success']) {
         echo json_encode(['success' => true, 'message' => 'Report sent successfully']);
