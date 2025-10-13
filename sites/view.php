@@ -44,7 +44,7 @@ include '../includes/header.php';
     <div class="page-header">
         <h1>Site: <?php echo htmlspecialchars($site['name']); ?></h1>
         <div>
-            <a href="../branches/create.php?site_id=<?php echo $siteId; ?>" class="btn btn-primary">+ Create Branch</a>
+            <button onclick="showCreateBranchModal()" class="btn btn-primary">+ Create Branch</button>
             <button type="button" class="btn btn-success" onclick="showBulkUpdateModal()">💰 Bulk Update Amounts</button>
             <a href="index.php" class="btn btn-secondary">← Back to Sites</a>
         </div>
@@ -87,7 +87,7 @@ include '../includes/header.php';
             <tbody>
                 <?php if (empty($branches)): ?>
                     <tr>
-                        <td colspan="5" class="text-center">No branches found. <a href="../branches/create.php?site_id=<?php echo $siteId; ?>">Create a branch</a></td>
+                        <td colspan="5" class="text-center">No branches found. Click the "+ Create Branch" button above to add one.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($branches as $branch): ?>
@@ -129,6 +129,54 @@ include '../includes/header.php';
             </tfoot>
             <?php endif; ?>
         </table>
+    </div>
+</div>
+
+<!-- Create Branch Modal -->
+<div id="createBranchModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Branch</h2>
+            <span class="modal-close" onclick="closeCreateBranchModal()">&times;</span>
+        </div>
+        <form id="createBranchForm">
+            <input type="hidden" name="site_id" value="<?php echo $siteId; ?>">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Site</label>
+                    <input type="text" value="<?php echo htmlspecialchars($site['name']); ?>" disabled class="form-control">
+                    <small>Branch will be created under this site</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="branch_code">Branch Code *</label>
+                    <input type="text" id="branch_code" name="branch_code" required 
+                           placeholder="e.g., BR001, BR002" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="balance">Initial Balance *</label>
+                    <input type="number" id="balance" name="balance" step="0.01" required value="0" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="agent_id">Assign Agent (Optional)</label>
+                    <select id="agent_id" name="agent_id" class="form-control">
+                        <option value="">-- No Agent --</option>
+                        <?php
+                        $agentsStmt = $pdo->query("SELECT id, name FROM agents ORDER BY name");
+                        while ($agent = $agentsStmt->fetch()) {
+                            echo '<option value="'.$agent['id'].'">'.htmlspecialchars($agent['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateBranchModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Branch</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -175,6 +223,16 @@ include '../includes/header.php';
 <script>
 const SITE_URL = '<?php echo SITE_URL; ?>';
 const SITE_ID = <?php echo $siteId; ?>;
+
+function showCreateBranchModal() {
+    document.getElementById('createBranchModal').style.display = 'block';
+    document.getElementById('branch_code').focus();
+}
+
+function closeCreateBranchModal() {
+    document.getElementById('createBranchModal').style.display = 'none';
+    document.getElementById('createBranchForm').reset();
+}
 
 function editBalance(branchId) {
     document.getElementById('balance-display-' + branchId).style.display = 'none';
@@ -259,6 +317,47 @@ $('#bulkUpdateForm').on('submit', function(e) {
         }
     });
 });
+
+$('#createBranchForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    const $submitBtn = $(this).find('button[type="submit"]');
+    const originalText = $submitBtn.text();
+    
+    $submitBtn.text('Creating...').prop('disabled', true);
+    
+    $.ajax({
+        url: SITE_URL + '/api/create_branch.php',
+        method: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Branch created successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to create branch'));
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        },
+        error: function() {
+            alert('✗ Error creating branch. Please try again.');
+            $submitBtn.text(originalText).prop('disabled', false);
+        }
+    });
+});
+
+window.onclick = function(event) {
+    const branchModal = document.getElementById('createBranchModal');
+    if (event.target == branchModal) {
+        closeCreateBranchModal();
+    }
+    const bulkModal = document.getElementById('bulkUpdateModal');
+    if (event.target == bulkModal) {
+        closeBulkUpdateModal();
+    }
+}
 </script>
 
 <?php include '../includes/footer.php'; ?>
