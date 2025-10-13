@@ -54,6 +54,9 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
             <a href="<?php echo SITE_URL; ?>/agents/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/agents/') !== false ? 'active' : ''; ?>">
                 <i class="icon-agent"></i> Agents
             </a>
+            <a href="<?php echo SITE_URL; ?>/masters/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/masters/') !== false ? 'active' : ''; ?>">
+                <i class="icon-agent"></i> Masters
+            </a>
             <a href="<?php echo SITE_URL; ?>/reports/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/index.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-report"></i> Reports
             </a>
