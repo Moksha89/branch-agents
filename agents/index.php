@@ -13,7 +13,7 @@ $stmt = $pdo->query("
     LEFT JOIN agent_phones ap ON a.id = ap.agent_id
     LEFT JOIN branches b ON b.agent_id = a.id
     GROUP BY a.id
-    ORDER BY a.name
+    ORDER BY a.is_active DESC, a.name
 ");
 $agents = $stmt->fetchAll();
 
@@ -35,33 +35,41 @@ include '../includes/header.php';
                     <th>Phone Numbers</th>
                     <th>Branches</th>
                     <th>Total Balance</th>
+                    <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($agents)): ?>
                     <tr>
-                        <td colspan="6" class="text-center">No agents found. <a href="create.php">Create your first agent</a></td>
+                        <td colspan="7" class="text-center">No agents found. <a href="create.php">Create your first agent</a></td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($agents as $agent): ?>
-                        <tr>
+                        <tr style="<?php echo !$agent['is_active'] ? 'opacity: 0.6; background-color: #f8f9fa;' : ''; ?>">
                             <td><?php echo $agent['id']; ?></td>
-                            <td><strong><?php echo htmlspecialchars($agent['name']); ?></strong></td>
+                            <td>
+                                <strong><?php echo htmlspecialchars($agent['name']); ?></strong>
+                                <?php if (!$agent['is_active']): ?>
+                                    <span class="badge badge-secondary" style="margin-left: 5px; font-size: 10px; padding: 2px 6px; background: #6c757d; color: white; border-radius: 3px;">INACTIVE</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars($agent['phones'] ?? 'No phone'); ?></td>
                             <td><?php echo $agent['branch_count']; ?></td>
                             <td class="<?php echo $agent['total_balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
                                 <?php echo formatCurrency($agent['total_balance']); ?>
                             </td>
                             <td>
+                                <span class="badge <?php echo $agent['is_active'] ? 'badge-success' : 'badge-secondary'; ?>" style="padding: 4px 8px; font-size: 11px;">
+                                    <?php echo $agent['is_active'] ? 'Active' : 'Inactive'; ?>
+                                </span>
+                            </td>
+                            <td>
                                 <a href="view.php?id=<?php echo $agent['id']; ?>" class="btn btn-sm btn-info">View</a>
-                                <a href="edit.php?id=<?php echo $agent['id']; ?>" class="btn btn-sm btn-warning">Edit</a>
-                                <button onclick="sendWhatsApp(<?php echo $agent['id']; ?>, '<?php echo htmlspecialchars($agent['name']); ?>')" 
-                                        class="btn btn-sm whatsapp-btn" data-agent-id="<?php echo $agent['id']; ?>">
-                                    📱 Send Report
+                                <button class="btn btn-sm btn-warning" onclick="showEditAgentModal(<?php echo $agent['id']; ?>, '<?php echo htmlspecialchars($agent['name'], ENT_QUOTES); ?>', <?php echo json_encode(explode(', ', $agent['phones'] ?? '')); ?>)">Edit</button>
+                                <button onclick="toggleAgentStatus(<?php echo $agent['id']; ?>, <?php echo $agent['is_active'] ? 'true' : 'false'; ?>)" class="btn btn-sm <?php echo $agent['is_active'] ? 'btn-secondary' : 'btn-success'; ?>">
+                                    <?php echo $agent['is_active'] ? 'Deactivate' : 'Activate'; ?>
                                 </button>
-                                <a href="delete.php?id=<?php echo $agent['id']; ?>" class="btn btn-sm btn-danger" 
-                                   onclick="return confirm('Are you sure you want to delete this agent?')">Delete</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -109,9 +117,41 @@ include '../includes/header.php';
     </div>
 </div>
 
+<!-- Edit Agent Modal -->
+<div id="editAgentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Agent</h2>
+            <span class="modal-close" onclick="closeEditAgentModal()">&times;</span>
+        </div>
+        <form id="editAgentForm">
+            <input type="hidden" id="edit_agent_id" name="agent_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit_agent_name">Agent Name *</label>
+                    <input type="text" id="edit_agent_name" name="name" required 
+                           placeholder="e.g., John Doe" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone Numbers *</label>
+                    <div id="editPhoneNumbersContainer">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addEditPhoneNumber()">+ Add Phone Number</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditAgentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Agent</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const SITE_URL = '<?php echo SITE_URL; ?>';
 let phoneNumberIndex = 1;
+let editPhoneNumberIndex = 0;
 
 function showCreateAgentModal() {
     document.getElementById('createAgentModal').style.display = 'block';
@@ -155,10 +195,89 @@ function addPhoneNumber() {
     phoneNumberIndex++;
 }
 
+function showEditAgentModal(agentId, agentName, phones) {
+    document.getElementById('edit_agent_id').value = agentId;
+    document.getElementById('edit_agent_name').value = agentName;
+    
+    const container = document.getElementById('editPhoneNumbersContainer');
+    container.innerHTML = '';
+    editPhoneNumberIndex = 0;
+    
+    if (phones && phones.length > 0 && phones[0] !== '') {
+        phones.forEach((phone, index) => {
+            const row = document.createElement('div');
+            row.className = 'phone-number-row';
+            row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+            row.innerHTML = `
+                <input type="text" name="phones[]" required 
+                       placeholder="Enter phone number" 
+                       style="flex: 1;" value="${phone.trim()}">
+                ${index > 0 ? '<button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✗</button>' : ''}
+            `;
+            container.appendChild(row);
+            editPhoneNumberIndex++;
+        });
+    } else {
+        addEditPhoneNumber();
+    }
+    
+    document.getElementById('editAgentModal').style.display = 'block';
+    document.getElementById('edit_agent_name').focus();
+}
+
+function closeEditAgentModal() {
+    document.getElementById('editAgentModal').style.display = 'none';
+    document.getElementById('editAgentForm').reset();
+}
+
+function addEditPhoneNumber() {
+    const container = document.getElementById('editPhoneNumbersContainer');
+    const newRow = document.createElement('div');
+    newRow.className = 'phone-number-row';
+    newRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+    newRow.innerHTML = `
+        <input type="text" name="phones[]" required 
+               placeholder="Enter phone number" 
+               style="flex: 1;">
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✗</button>
+    `;
+    container.appendChild(newRow);
+    editPhoneNumberIndex++;
+}
+
+function toggleAgentStatus(agentId, currentStatus) {
+    const action = currentStatus ? 'deactivate' : 'activate';
+    if (!confirm(`Are you sure you want to ${action} this agent?`)) {
+        return;
+    }
+    
+    $.ajax({
+        url: SITE_URL + '/api/toggle_agent_status.php',
+        method: 'POST',
+        data: { agent_id: agentId },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ ' + response.message);
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to toggle status'));
+            }
+        },
+        error: function() {
+            alert('✗ Error toggling agent status. Please try again.');
+        }
+    });
+}
+
 window.onclick = function(event) {
     const agentModal = document.getElementById('createAgentModal');
     if (event.target == agentModal) {
         closeCreateAgentModal();
+    }
+    const editModal = document.getElementById('editAgentModal');
+    if (event.target == editModal) {
+        closeEditAgentModal();
     }
 }
 
@@ -187,6 +306,36 @@ $('#createAgentForm').on('submit', function(e) {
         },
         error: function() {
             alert('✗ Error creating agent. Please try again.');
+            $submitBtn.text(originalText).prop('disabled', false);
+        }
+    });
+});
+
+$('#editAgentForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    const $submitBtn = $(this).find('button[type="submit"]');
+    const originalText = $submitBtn.text();
+    
+    $submitBtn.text('Updating...').prop('disabled', true);
+    
+    $.ajax({
+        url: SITE_URL + '/api/update_agent.php',
+        method: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Agent updated successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to update agent'));
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        },
+        error: function() {
+            alert('✗ Error updating agent. Please try again.');
             $submitBtn.text(originalText).prop('disabled', false);
         }
     });

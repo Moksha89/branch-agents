@@ -18,6 +18,7 @@ $stmt = $pdo->query("
     LEFT JOIN agent_phones ap ON a.id = ap.agent_id
     LEFT JOIN branches b ON b.agent_id = a.id
     LEFT JOIN sites s ON b.site_id = s.id
+    WHERE a.is_active = TRUE
     GROUP BY a.id
     ORDER BY total_balance DESC
 ");

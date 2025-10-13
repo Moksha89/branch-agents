@@ -28,6 +28,20 @@ if ($agentId <= 0) {
 }
 
 try {
+    $stmt = $pdo->prepare("SELECT is_active FROM agents WHERE id = ?");
+    $stmt->execute([$agentId]);
+    $agent = $stmt->fetch();
+    
+    if (!$agent) {
+        echo json_encode(['success' => false, 'error' => 'Agent not found']);
+        exit;
+    }
+    
+    if (!$agent['is_active']) {
+        echo json_encode(['success' => false, 'error' => 'Cannot send report to inactive agent']);
+        exit;
+    }
+    
     $stmt = $pdo->prepare("
         SELECT phone FROM agent_phones 
         WHERE agent_id = ? AND is_primary = 1
