@@ -131,52 +131,20 @@ function sendSelectedReports() {
         return;
     }
     
-    const whatsappToken = localStorage.getItem('whatsapp_session_token');
-    if (!whatsappToken) {
-        alert('❌ WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection first.');
-        return;
-    }
-    
     if (!confirm(`Send reports to ${selectedCheckboxes.length} selected agent(s) via WhatsApp?`)) {
         return;
     }
     
-    $.ajax({
-        url: SITE_URL + '/api/save_whatsapp_token.php',
-        method: 'POST',
-        data: { session_token: whatsappToken },
-        success: function() {
-            const selectedAgentIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
-            proceedWithBulkSend(selectedAgentIds);
-        },
-        error: function() {
-            alert('❌ Failed to sync WhatsApp session. Please try again.');
-        }
-    });
+    const selectedAgentIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    proceedWithBulkSend(selectedAgentIds);
 }
 
 function sendAllReports() {
-    const whatsappToken = localStorage.getItem('whatsapp_session_token');
-    if (!whatsappToken) {
-        alert('❌ WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection first.');
-        return;
-    }
-    
     if (!confirm('Send reports to all agents via WhatsApp?')) {
         return;
     }
     
-    $.ajax({
-        url: SITE_URL + '/api/save_whatsapp_token.php',
-        method: 'POST',
-        data: { session_token: whatsappToken },
-        success: function() {
-            proceedWithBulkSend();
-        },
-        error: function() {
-            alert('❌ Failed to sync WhatsApp session. Please try again.');
-        }
-    });
+    proceedWithBulkSend();
 }
 
 function proceedWithBulkSend(agentIds = null) {
