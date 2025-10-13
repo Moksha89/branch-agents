@@ -80,21 +80,3 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
                 </span>
             </div>
         </div>
-        
-        <?php
-        $stmt = $pdo->query("SELECT * FROM whatsapp_config WHERE id = 1");
-        $whatsappConfig = $stmt->fetch();
-        $showWhatsAppError = false;
-        
-        if ($whatsappConfig && $whatsappConfig['is_active'] && !empty($whatsappConfig['api_url'])) {
-            if (!isset($_SESSION['whatsapp_session_token']) || empty($_SESSION['whatsapp_session_token'])) {
-                $showWhatsAppError = true;
-            }
-        }
-        
-        if ($showWhatsAppError && strpos($_SERVER['PHP_SELF'], '/settings/whatsapp_web.php') === false):
-        ?>
-            <div class="alert alert-error" style="margin: 20px; border-radius: 4px;">
-                <strong>✗ Error:</strong> WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection.
-            </div>
-        <?php endif; ?>

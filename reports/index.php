@@ -170,59 +170,6 @@ function sendAllReports() {
     });
 }
 
-function sendWhatsApp(agentId, agentName) {
-    const whatsappToken = localStorage.getItem('whatsapp_session_token');
-    if (!whatsappToken) {
-        alert('❌ WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection first.');
-        return;
-    }
-    
-    const button = document.querySelector(`.whatsapp-btn[data-agent-id="${agentId}"]`);
-    const originalText = button.innerHTML;
-    button.innerHTML = '⏳ Sending...';
-    button.disabled = true;
-    
-    $.ajax({
-        url: SITE_URL + '/api/save_whatsapp_token.php',
-        method: 'POST',
-        data: { session_token: whatsappToken },
-        success: function() {
-            $.ajax({
-                url: SITE_URL + '/api/send_whatsapp.php',
-                method: 'POST',
-                data: { agent_id: agentId },
-                dataType: 'json',
-                success: function(response) {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                    
-                    if (response.success) {
-                        alert('✅ Report sent successfully to ' + agentName);
-                    } else {
-                        alert('❌ Failed to send report: ' + (response.error || 'Unknown error'));
-                    }
-                },
-                error: function(xhr) {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                    
-                    let errorMsg = 'Network error';
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        errorMsg = response.error || errorMsg;
-                    } catch(e) {}
-                    alert('❌ Failed to send report: ' + errorMsg);
-                }
-            });
-        },
-        error: function() {
-            button.innerHTML = originalText;
-            button.disabled = false;
-            alert('❌ Failed to sync WhatsApp session. Please try again.');
-        }
-    });
-}
-
 function proceedWithBulkSend(agentIds = null) {
     if (!agentIds) {
         agentIds = <?php echo json_encode(array_column($agentReports, 'id')); ?>;
