@@ -271,34 +271,18 @@ function sendReportsToMasters() {
         return;
     }
     
-    const whatsappToken = localStorage.getItem('whatsapp_session_token');
-    if (!whatsappToken) {
-        alert('❌ WhatsApp is not connected. Please connect WhatsApp in Settings → WhatsApp Connection first.');
-        return;
-    }
-    
     if (!confirm(`Send ${selectedAgents.length} agent report(s) to ${selectedMasters.length} master(s) via WhatsApp?\n\nFormat: ${format.replace('_', ' ')}`)) {
         return;
     }
     
-    $.ajax({
-        url: SITE_URL + '/api/save_whatsapp_token.php',
-        method: 'POST',
-        data: { session_token: whatsappToken },
-        success: function() {
-            const masters = selectedMasters.map(cb => ({
-                id: cb.value,
-                name: cb.dataset.name,
-                phone: cb.dataset.phone
-            }));
-            const agentIds = selectedAgents.map(cb => parseInt(cb.value));
-            
-            proceedWithMasterSend(masters, agentIds, format);
-        },
-        error: function() {
-            alert('❌ Failed to sync WhatsApp session. Please try again.');
-        }
-    });
+    const masters = selectedMasters.map(cb => ({
+        id: cb.value,
+        name: cb.dataset.name,
+        phone: cb.dataset.phone
+    }));
+    const agentIds = selectedAgents.map(cb => parseInt(cb.value));
+    
+    proceedWithMasterSend(masters, agentIds, format);
 }
 
 function proceedWithMasterSend(masters, agentIds, format) {
