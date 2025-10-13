@@ -22,6 +22,23 @@ $(document).ready(function() {
             }
         });
     }
+    
+    const whatsappToken = localStorage.getItem('whatsapp_session_token');
+    
+    if (whatsappToken && whatsappToken.trim() !== '') {
+        $.ajax({
+            url: '<?php echo SITE_URL; ?>/api/save_whatsapp_token.php',
+            method: 'POST',
+            data: { session_token: whatsappToken },
+            dataType: 'json',
+            success: function(response) {
+                console.log('WhatsApp token synced to session');
+            },
+            error: function(xhr, status, error) {
+                console.error('Failed to sync WhatsApp token:', error);
+            }
+        });
+    }
 });
 </script>
 </body>
