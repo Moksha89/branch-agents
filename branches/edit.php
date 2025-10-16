@@ -3,6 +3,14 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasModuleAccess('branches')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+if (!hasFullAccess('branches')) {
+    redirect(SITE_URL . '/branches/index.php');
+}
+
 $branchId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($branchId <= 0) {

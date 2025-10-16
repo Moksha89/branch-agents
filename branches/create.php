@@ -3,6 +3,14 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasModuleAccess('branches')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+if (!hasFullAccess('branches')) {
+    redirect(SITE_URL . '/branches/index.php');
+}
+
 $error = '';
 $success = '';
 

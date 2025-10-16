@@ -3,6 +3,14 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasModuleAccess('sites')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+if (!hasFullAccess('sites')) {
+    redirect(SITE_URL . '/sites/index.php');
+}
+
 $siteId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($siteId <= 0) {
