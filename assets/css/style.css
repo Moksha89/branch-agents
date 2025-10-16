@@ -77,18 +77,19 @@ body {
     top: 0;
     width: var(--sidebar-width);
     height: 100vh;
-    background: linear-gradient(180deg, #2D3748 0%, #1A202C 100%);
-    color: white;
+    background: white;
+    color: #1F2937;
     overflow-y: auto;
     z-index: 1000;
-    box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+    border-right: 1px solid #E5E7EB;
 }
 
 .sidebar-header {
     padding: 24px 20px;
-    background: rgba(0,0,0,0.2);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: none;
 }
 
 .sidebar-header h2 {
@@ -96,6 +97,7 @@ body {
     font-weight: 700;
     margin: 0;
     letter-spacing: -0.01em;
+    color: white;
 }
 
 .sidebar-nav {
@@ -105,7 +107,7 @@ body {
 .nav-item {
     display: block;
     padding: 16px 24px;
-    color: #9CA3AF;
+    color: #6B7280;
     text-decoration: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-left: 4px solid transparent;
@@ -116,15 +118,15 @@ body {
 }
 
 .nav-item:hover {
-    background: rgba(102, 126, 234, 0.15);
-    color: white;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    color: #667eea;
     border-left-color: #667eea;
     padding-left: 24px;
     transform: translateX(4px);
 }
 
 .nav-item.active {
-    background: rgba(102, 126, 234, 0.25);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-left-color: #667eea;
     padding-left: 24px;
@@ -300,16 +302,17 @@ body {
 }
 
 .stat-card {
-    background: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 16px;
     padding: 32px;
     display: flex;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     position: relative;
     overflow: hidden;
+    color: white;
 }
 
 .stat-card::before {
@@ -317,16 +320,16 @@ body {
     position: absolute;
     top: 0;
     right: 0;
-    width: 100px;
-    height: 100px;
-    background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
     border-radius: 50%;
-    transform: translate(30%, -30%);
+    transform: translate(40%, -40%);
 }
 
 .stat-card:hover {
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+    transform: translateY(-6px);
 }
 
 .stat-icon {
@@ -339,36 +342,54 @@ body {
     font-size: 32px;
     color: white;
     margin-right: 24px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     flex-shrink: 0;
 }
 
-.bg-blue {
+.stat-card:nth-child(1) {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.bg-green {
+.stat-card:nth-child(2) {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%);
 }
 
-.bg-orange {
+.stat-card:nth-child(3) {
     background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
 }
 
-.bg-purple {
+.stat-card:nth-child(4) {
     background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+}
+
+.bg-blue {
+    background: transparent;
+}
+
+.bg-green {
+    background: transparent;
+}
+
+.bg-orange {
+    background: transparent;
+}
+
+.bg-purple {
+    background: transparent;
 }
 
 .stat-details h3 {
     font-size: 32px;
     font-weight: 700;
     margin-bottom: 8px;
-    color: #1F2937;
+    color: white;
     letter-spacing: -0.02em;
 }
 
 .stat-details p {
-    color: #6B7280;
+    color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
     font-weight: 500;
     text-transform: uppercase;
