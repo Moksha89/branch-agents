@@ -112,6 +112,11 @@ include '../includes/header.php';
                             <td>
                                 <button class="btn btn-sm btn-warning" onclick="editBalance(<?php echo $branch['id']; ?>)">✏️ Edit Amount</button>
                                 <button class="btn btn-sm btn-info" onclick="showEditBranchModal(<?php echo $branch['id']; ?>, '<?php echo htmlspecialchars($branch['branch_code'], ENT_QUOTES); ?>', <?php echo $branch['balance']; ?>, <?php echo $branch['site_id']; ?>, <?php echo $branch['agent_id'] ? $branch['agent_id'] : 'null'; ?>)">Edit Branch</button>
+                                <?php if ($branch['agent_id']): ?>
+                                    <button class="btn btn-sm btn-danger" onclick="unassignAgent(<?php echo $branch['id']; ?>, '<?php echo htmlspecialchars($branch['branch_code'], ENT_QUOTES); ?>')">🚫 Unassign Agent</button>
+                                <?php else: ?>
+                                    <button class="btn btn-sm btn-success" onclick="showAssignAgentModal(<?php echo $branch['id']; ?>, '<?php echo htmlspecialchars($branch['branch_code'], ENT_QUOTES); ?>')">👤 Assign Agent</button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -273,6 +278,43 @@ include '../includes/header.php';
     </div>
 </div>
 
+<!-- Assign Agent Modal -->
+<div id="assignAgentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Assign Agent to Branch</h2>
+            <span class="modal-close" onclick="closeAssignAgentModal()">&times;</span>
+        </div>
+        <form id="assignAgentForm">
+            <input type="hidden" id="assign_branch_id" name="branch_id">
+            <input type="hidden" id="assign_branch_code" name="branch_code">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Branch</label>
+                    <input type="text" id="assign_branch_display" disabled class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="assign_agent_id">Select Agent *</label>
+                    <select id="assign_agent_id" name="agent_id" required class="form-control">
+                        <option value="">-- Select Agent --</option>
+                        <?php
+                        $agentsStmt = $pdo->query("SELECT id, name FROM agents WHERE status = 'active' ORDER BY name");
+                        while ($agent = $agentsStmt->fetch()) {
+                            echo '<option value="'.$agent['id'].'">'.htmlspecialchars($agent['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAssignAgentModal()">Cancel</button>
+                <button type="submit" class="btn btn-success">👤 Assign Agent</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const SITE_URL = '<?php echo SITE_URL; ?>';
 const SITE_ID = <?php echo $siteId; ?>;
@@ -330,74 +372,136 @@ function closeBulkUpdateModal() {
     document.getElementById('bulkUpdateModal').style.display = 'none';
 }
 
-$('#bulkUpdateForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = $(this).serializeArray();
-    const updates = [];
-    
-    formData.forEach(function(item) {
-        if (item.value !== '') {
-            const branchId = item.name.match(/\[(\d+)\]/)[1];
-            updates.push({
-                branch_id: branchId,
-                balance: item.value
-            });
-        }
-    });
-    
-    if (updates.length === 0) {
-        alert('No changes to save.');
-        return;
-    }
-    
-    $.ajax({
-        url: SITE_URL + '/api/bulk_update_balances.php',
-        method: 'POST',
-        data: JSON.stringify(updates),
-        contentType: 'application/json',
-        dataType: 'json',
-        success: function(response) {
-            if (response.success) {
-                alert('Updated ' + response.updated + ' branch(es) successfully!');
-                location.reload();
-            } else {
-                alert('Error: ' + (response.error || 'Failed to update balances'));
+$(document).ready(function() {
+    $('#bulkUpdateForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serializeArray();
+        const updates = [];
+        
+        formData.forEach(function(item) {
+            if (item.value !== '') {
+                const branchId = item.name.match(/\[(\d+)\]/)[1];
+                updates.push({
+                    branch_id: branchId,
+                    balance: item.value
+                });
             }
-        },
-        error: function() {
-            alert('Failed to update balances. Please try again.');
+        });
+        
+        if (updates.length === 0) {
+            alert('No changes to save.');
+            return;
         }
+        
+        $.ajax({
+            url: SITE_URL + '/api/bulk_update_balances.php',
+            method: 'POST',
+            data: JSON.stringify(updates),
+            contentType: 'application/json',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('Updated ' + response.updated + ' branch(es) successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (response.error || 'Failed to update balances'));
+                }
+            },
+            error: function() {
+                alert('Failed to update balances. Please try again.');
+            }
+        });
     });
-});
 
-$('#createBranchForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = $(this).serialize();
-    const $submitBtn = $(this).find('button[type="submit"]');
-    const originalText = $submitBtn.text();
-    
-    $submitBtn.text('Creating...').prop('disabled', true);
-    
-    $.ajax({
-        url: SITE_URL + '/api/create_branch.php',
-        method: 'POST',
-        data: formData,
-        dataType: 'json',
-        success: function(response) {
-            if (response.success) {
-                alert('✓ Branch created successfully!');
-                location.reload();
-            } else {
-                alert('✗ Error: ' + (response.error || 'Failed to create branch'));
+    $('#createBranchForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serialize();
+        const $submitBtn = $(this).find('button[type="submit"]');
+        const originalText = $submitBtn.text();
+        
+        $submitBtn.text('Creating...').prop('disabled', true);
+        
+        $.ajax({
+            url: SITE_URL + '/api/create_branch.php',
+            method: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('✓ Branch created successfully!');
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (response.error || 'Failed to create branch'));
+                    $submitBtn.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('✗ Error creating branch. Please try again.');
                 $submitBtn.text(originalText).prop('disabled', false);
             }
-        },
-        error: function() {
-            alert('✗ Error creating branch. Please try again.');
-            $submitBtn.text(originalText).prop('disabled', false);
-        }
+        });
+    });
+
+    $('#editBranchForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serialize();
+        const $submitBtn = $(this).find('button[type="submit"]');
+        const originalText = $submitBtn.text();
+        
+        $submitBtn.text('Updating...').prop('disabled', true);
+        
+        $.ajax({
+            url: SITE_URL + '/api/update_branch.php',
+            method: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('✓ Branch updated successfully!');
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (response.error || 'Failed to update branch'));
+                    $submitBtn.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('✗ Error updating branch. Please try again.');
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        });
+    });
+
+    $('#assignAgentForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serialize();
+        const $submitBtn = $(this).find('button[type="submit"]');
+        const originalText = $submitBtn.text();
+        
+        $submitBtn.text('Assigning...').prop('disabled', true);
+        
+        $.ajax({
+            url: SITE_URL + '/api/assign_agent_to_branch.php',
+            method: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('✓ Agent assigned successfully!');
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (response.error || 'Failed to assign agent'));
+                    $submitBtn.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('✗ Error assigning agent. Please try again.');
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        });
     });
 });
 
@@ -417,35 +521,46 @@ function closeEditBranchModal() {
     document.getElementById('editBranchForm').reset();
 }
 
-$('#editBranchForm').on('submit', function(e) {
-    e.preventDefault();
+function showAssignAgentModal(branchId, branchCode) {
+    document.getElementById('assign_branch_id').value = branchId;
+    document.getElementById('assign_branch_code').value = branchCode;
+    document.getElementById('assign_branch_display').value = branchCode;
+    document.getElementById('assign_agent_id').value = '';
     
-    const formData = $(this).serialize();
-    const $submitBtn = $(this).find('button[type="submit"]');
-    const originalText = $submitBtn.text();
-    
-    $submitBtn.text('Updating...').prop('disabled', true);
+    document.getElementById('assignAgentModal').style.display = 'block';
+    document.getElementById('assign_agent_id').focus();
+}
+
+function closeAssignAgentModal() {
+    document.getElementById('assignAgentModal').style.display = 'none';
+    document.getElementById('assignAgentForm').reset();
+}
+
+function unassignAgent(branchId, branchCode) {
+    if (!confirm('Are you sure you want to unassign the agent from branch ' + branchCode + '?')) {
+        return;
+    }
     
     $.ajax({
-        url: SITE_URL + '/api/update_branch.php',
+        url: SITE_URL + '/api/unassign_agent_from_branch.php',
         method: 'POST',
-        data: formData,
+        data: {
+            branch_id: branchId
+        },
         dataType: 'json',
         success: function(response) {
             if (response.success) {
-                alert('✓ Branch updated successfully!');
+                alert('✓ Agent unassigned successfully!');
                 location.reload();
             } else {
-                alert('✗ Error: ' + (response.error || 'Failed to update branch'));
-                $submitBtn.text(originalText).prop('disabled', false);
+                alert('✗ Error: ' + (response.error || 'Failed to unassign agent'));
             }
         },
         error: function() {
-            alert('✗ Error updating branch. Please try again.');
-            $submitBtn.text(originalText).prop('disabled', false);
+            alert('✗ Error unassigning agent. Please try again.');
         }
     });
-});
+}
 
 window.onclick = function(event) {
     const branchModal = document.getElementById('createBranchModal');
@@ -459,6 +574,10 @@ window.onclick = function(event) {
     const editModal = document.getElementById('editBranchModal');
     if (event.target == editModal) {
         closeEditBranchModal();
+    }
+    const assignModal = document.getElementById('assignAgentModal');
+    if (event.target == assignModal) {
+        closeAssignAgentModal();
     }
 }
 </script>

@@ -65,10 +65,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             
+            $stmt = $pdo->prepare("UPDATE branches SET agent_id = NULL WHERE agent_id = ?");
+            $stmt->execute([$agentId]);
+            
             $stmt = $pdo->prepare("DELETE FROM agent_branches WHERE agent_id = ?");
             $stmt->execute([$agentId]);
             
             if (!empty($branches)) {
+                $stmt = $pdo->prepare("UPDATE branches SET agent_id = ? WHERE id = ?");
+                foreach ($branches as $branchId) {
+                    $stmt->execute([$agentId, $branchId]);
+                }
+                
                 $stmt = $pdo->prepare("INSERT INTO agent_branches (agent_id, branch_id) VALUES (?, ?)");
                 foreach ($branches as $branchId) {
                     $stmt->execute([$agentId, $branchId]);
@@ -141,6 +149,12 @@ include '../includes/header.php';
             
             <div class="form-group">
                 <label>Assign Branches</label>
+                <?php if (!empty($allBranches)): ?>
+                    <div style="margin-bottom: 10px;">
+                        <button type="button" class="btn btn-sm btn-success" onclick="selectAllBranches()">✓ Select All Branches</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="deselectAllBranches()">✗ Deselect All Branches</button>
+                    </div>
+                <?php endif; ?>
                 <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px; border-radius: 5px;">
                     <?php if (empty($allBranches)): ?>
                         <p>No branches available. <a href="../branches/create.php">Create a branch first</a></p>
@@ -157,7 +171,7 @@ include '../includes/header.php';
                         ?>
                             <div style="margin-left: 20px;">
                                 <label style="font-weight: normal;">
-                                    <input type="checkbox" name="branches[]" value="<?php echo $branch['id']; ?>"
+                                    <input type="checkbox" name="branches[]" class="branch-checkbox" value="<?php echo $branch['id']; ?>"
                                            <?php echo in_array($branch['id'], $assignedBranches) ? 'checked' : ''; ?>>
                                     <?php echo htmlspecialchars($branch['branch_code']); ?> 
                                     (<?php echo formatCurrency($branch['balance']); ?>)
@@ -178,5 +192,19 @@ include '../includes/header.php';
         </form>
     </div>
 </div>
+
+<script>
+function selectAllBranches() {
+    document.querySelectorAll('.branch-checkbox').forEach(function(checkbox) {
+        checkbox.checked = true;
+    });
+}
+
+function deselectAllBranches() {
+    document.querySelectorAll('.branch-checkbox').forEach(function(checkbox) {
+        checkbox.checked = false;
+    });
+}
+</script>
 
 <?php include '../includes/footer.php'; ?>

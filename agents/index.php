@@ -11,7 +11,7 @@ $stmt = $pdo->query("
     SELECT 
         a.id,
         a.name,
-        a.is_active,
+        a.status,
         a.created_at,
         a.updated_at,
         GROUP_CONCAT(DISTINCT ap.phone ORDER BY ap.is_primary DESC SEPARATOR ', ') as phones,
@@ -28,7 +28,7 @@ $stmt = $pdo->query("
         GROUP BY agent_id
     ) branch_data ON a.id = branch_data.agent_id
     GROUP BY a.id
-    ORDER BY a.is_active DESC, a.name
+    ORDER BY (a.status = 'active') DESC, a.name
 ");
 $agents = $stmt->fetchAll();
 
@@ -63,11 +63,11 @@ include '../includes/header.php';
                     </tr>
                 <?php else: ?>
                     <?php foreach ($agents as $agent): ?>
-                        <tr style="<?php echo !$agent['is_active'] ? 'opacity: 0.6; background-color: #f8f9fa;' : ''; ?>">
+                        <tr style="<?php echo ($agent['status'] != 'active') ? 'opacity: 0.6; background-color: #f8f9fa;' : ''; ?>">
                             <td><?php echo $agent['id']; ?></td>
                             <td>
                                 <strong><?php echo htmlspecialchars($agent['name']); ?></strong>
-                                <?php if (!$agent['is_active']): ?>
+                                <?php if ($agent['status'] != 'active'): ?>
                                     <span class="badge badge-secondary" style="margin-left: 5px; font-size: 10px; padding: 2px 6px; background: #6c757d; color: white; border-radius: 3px;">INACTIVE</span>
                                 <?php endif; ?>
                             </td>
@@ -77,16 +77,16 @@ include '../includes/header.php';
                                 <?php echo formatCurrency($agent['total_balance']); ?>
                             </td>
                             <td>
-                                <span class="badge <?php echo $agent['is_active'] ? 'badge-success' : 'badge-secondary'; ?>" style="padding: 4px 8px; font-size: 11px;">
-                                    <?php echo $agent['is_active'] ? 'Active' : 'Inactive'; ?>
+                                <span class="badge <?php echo ($agent['status'] == 'active') ? 'badge-success' : 'badge-secondary'; ?>" style="padding: 4px 8px; font-size: 11px;">
+                                    <?php echo ($agent['status'] == 'active') ? 'Active' : 'Inactive'; ?>
                                 </span>
                             </td>
                             <td>
                                 <a href="view.php?id=<?php echo $agent['id']; ?>" class="btn btn-sm btn-info">View</a>
                                 <?php if ($has_full_access): ?>
                                 <button class="btn btn-sm btn-warning" onclick="showEditAgentModal(<?php echo $agent['id']; ?>, '<?php echo htmlspecialchars($agent['name'], ENT_QUOTES); ?>', <?php echo json_encode(explode(', ', $agent['phones'] ?? '')); ?>)">Edit</button>
-                                <button onclick="toggleAgentStatus(<?php echo $agent['id']; ?>, <?php echo $agent['is_active'] ? 'true' : 'false'; ?>)" class="btn btn-sm <?php echo $agent['is_active'] ? 'btn-secondary' : 'btn-success'; ?>">
-                                    <?php echo $agent['is_active'] ? 'Deactivate' : 'Activate'; ?>
+                                <button onclick="toggleAgentStatus(<?php echo $agent['id']; ?>, <?php echo ($agent['status'] == 'active') ? 'true' : 'false'; ?>)" class="btn btn-sm <?php echo ($agent['status'] == 'active') ? 'btn-secondary' : 'btn-success'; ?>">
+                                    <?php echo ($agent['status'] == 'active') ? 'Deactivate' : 'Activate'; ?>
                                 </button>
                                 <?php endif; ?>
                             </td>
