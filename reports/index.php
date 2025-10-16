@@ -3,7 +3,17 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
-$stmt = $pdo->query("
+if (!hasModuleAccess('reports')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+$accessible_branch_ids = getAccessibleBranchIds();
+if (empty($accessible_branch_ids)) {
+    $agentReports = [];
+    $grandTotal = 0;
+} else {
+    $placeholders = implode(',', array_fill(0, count($accessible_branch_ids), '?'));
+    $stmt = $pdo->prepare("
     SELECT 
         a.id,
         a.name as agent_name,

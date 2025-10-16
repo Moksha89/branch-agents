@@ -3,6 +3,12 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasModuleAccess('masters')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+$has_full_access = hasFullAccess('masters');
+
 $stmt = $pdo->query("
     SELECT *
     FROM masters
@@ -28,7 +34,9 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Masters Management</h1>
+        <?php if ($has_full_access): ?>
         <button onclick="showCreateMasterModal()" class="btn btn-primary">+ Create New Master</button>
+        <?php endif; ?>
     </div>
     
     <div class="table-responsive">
@@ -55,8 +63,10 @@ include '../includes/header.php';
                             <td><?php echo htmlspecialchars($master['mobile_number']); ?></td>
                             <td><?php echo date('d-M-Y', strtotime($master['created_at'])); ?></td>
                             <td>
+                                <?php if ($has_full_access): ?>
                                 <button onclick="deleteMaster(<?php echo $master['id']; ?>, '<?php echo htmlspecialchars($master['name']); ?>')" 
                                         class="btn btn-sm btn-danger">Delete</button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

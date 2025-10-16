@@ -1,13 +1,14 @@
 <?php
 require_once '../config/config.php';
 require_once '../config/database.php';
+requireLogin();
 
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['admin_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+if (!hasFullAccess('agents')) {
+    echo json_encode(['success' => false, 'error' => 'You do not have permission to update agents']);
     exit;
 }
+
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);

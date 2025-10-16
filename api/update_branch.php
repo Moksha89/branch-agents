@@ -1,13 +1,14 @@
 <?php
 require_once '../config/config.php';
 require_once '../config/database.php';
+requireLogin();
 
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['admin_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+if (!hasFullAccess('branches')) {
+    echo json_encode(['success' => false, 'error' => 'You do not have permission to update branches']);
     exit;
 }
+
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);
@@ -19,6 +20,11 @@ $siteId = isset($_POST['site_id']) ? intval($_POST['site_id']) : 0;
 $branchCode = isset($_POST['branch_code']) ? sanitizeInput($_POST['branch_code']) : '';
 $balance = isset($_POST['balance']) ? floatval($_POST['balance']) : 0;
 $agentId = isset($_POST['agent_id']) && !empty($_POST['agent_id']) ? intval($_POST['agent_id']) : null;
+
+if (!canAccessBranch($branchId)) {
+    echo json_encode(['success' => false, 'error' => 'You do not have access to this branch']);
+    exit;
+}
 
 if ($branchId <= 0) {
     echo json_encode(['success' => false, 'error' => 'Invalid branch ID']);

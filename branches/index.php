@@ -3,17 +3,31 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
-$stmt = $pdo->query("
-    SELECT 
-        b.*,
-        s.name as site_name,
-        a.name as agent_name
-    FROM branches b
-    JOIN sites s ON b.site_id = s.id
-    LEFT JOIN agents a ON b.agent_id = a.id
-    ORDER BY s.name, b.branch_code
-");
-$branches = $stmt->fetchAll();
+if (!hasModuleAccess('branches')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+$accessible_branch_ids = getAccessibleBranchIds();
+if (empty($accessible_branch_ids)) {
+    $branches = [];
+} else {
+    $placeholders = implode(',', array_fill(0, count($accessible_branch_ids), '?'));
+    $stmt = $pdo->prepare("
+        SELECT 
+            b.*,
+            s.name as site_name,
+            a.name as agent_name
+        FROM branches b
+        JOIN sites s ON b.site_id = s.id
+        LEFT JOIN agents a ON b.agent_id = a.id
+        WHERE b.id IN ($placeholders)
+        ORDER BY s.name, b.branch_code
+    ");
+    $stmt->execute($accessible_branch_ids);
+    $branches = $stmt->fetchAll();
+}
+
+$has_full_access = hasFullAccess('branches');
 
 include '../includes/header.php';
 ?>
@@ -21,7 +35,9 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Branches Management</h1>
+        <?php if ($has_full_access): ?>
         <button onclick="showCreateBranchModal()" class="btn btn-primary">+ Create New Branch</button>
+        <?php endif; ?>
     </div>
     
     <div class="table-responsive">

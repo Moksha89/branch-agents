@@ -3,6 +3,11 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasFullAccess('masters')) {
+    echo json_encode(['success' => false, 'error' => 'You do not have permission to delete masters']);
+    exit;
+}
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

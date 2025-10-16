@@ -44,26 +44,48 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
             <h2><?php echo htmlspecialchars($portalName); ?></h2>
         </div>
         <nav class="sidebar-nav">
+            <?php if (hasModuleAccess('dashboard')): ?>
             <a href="<?php echo SITE_URL; ?>/dashboard.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>">
                 <i class="icon-dashboard"></i> Dashboard
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('sites')): ?>
             <a href="<?php echo SITE_URL; ?>/sites/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/sites/') !== false ? 'active' : ''; ?>">
                 <i class="icon-site"></i> Sites
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('branches')): ?>
             <a href="<?php echo SITE_URL; ?>/branches/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/branches/') !== false ? 'active' : ''; ?>">
                 <i class="icon-branch"></i> Branches
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('agents')): ?>
             <a href="<?php echo SITE_URL; ?>/agents/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/agents/') !== false ? 'active' : ''; ?>">
                 <i class="icon-agent"></i> Agents
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('masters')): ?>
             <a href="<?php echo SITE_URL; ?>/masters/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/masters/') !== false ? 'active' : ''; ?>">
                 <i class="icon-agent"></i> Masters
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('reports')): ?>
             <a href="<?php echo SITE_URL; ?>/reports/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/index.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-report"></i> Reports
             </a>
             <a href="<?php echo SITE_URL; ?>/reports/message_log.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/message_log.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-report"></i> Message Log
+            </a>
+            <?php endif; ?>
+            
+            <?php if (isAdmin()): ?>
+            <a href="<?php echo SITE_URL; ?>/employees/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/employees/') !== false ? 'active' : ''; ?>">
+                <i class="icon-agent"></i> Employees
             </a>
             <a href="<?php echo SITE_URL; ?>/settings/whatsapp_web.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/whatsapp_web.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-settings"></i> WhatsApp Connection
@@ -71,6 +93,8 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
             <a href="<?php echo SITE_URL; ?>/settings/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/index.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-settings"></i> Portal Settings
             </a>
+            <?php endif; ?>
+            
             <a href="<?php echo SITE_URL; ?>/logout.php" class="nav-item">
                 <i class="icon-logout"></i> Logout
             </a>
@@ -84,7 +108,9 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
             </div>
             <div class="topbar-right">
                 <span class="user-info">
-                    <i class="icon-user"></i> <?php echo $_SESSION['admin_mobile']; ?>
+                    <i class="icon-user"></i> 
+                    <?php echo isAdmin() ? $_SESSION['admin_mobile'] : $_SESSION['employee_name']; ?>
+                    <?php if (isEmployee()): ?> <small>(Employee)</small><?php endif; ?>
                 </span>
             </div>
         </div>

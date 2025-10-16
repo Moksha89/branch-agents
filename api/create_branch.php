@@ -3,6 +3,11 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasFullAccess('branches')) {
+    echo json_encode(['success' => false, 'error' => 'You do not have permission to create branches']);
+    exit;
+}
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -14,6 +19,11 @@ $site_id = intval($_POST['site_id'] ?? 0);
 $branch_code = sanitizeInput($_POST['branch_code'] ?? '');
 $balance = floatval($_POST['balance'] ?? 0);
 $agent_id = !empty($_POST['agent_id']) ? intval($_POST['agent_id']) : null;
+
+if (!canAccessSite($site_id)) {
+    echo json_encode(['success' => false, 'error' => 'You do not have access to this site']);
+    exit;
+}
 
 if ($site_id <= 0) {
     echo json_encode(['success' => false, 'error' => 'Site is required']);

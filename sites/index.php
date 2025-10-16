@@ -3,18 +3,32 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
-$stmt = $pdo->query("
-    SELECT 
-        s.*,
-        COUNT(DISTINCT b.id) as branch_count,
-        COUNT(DISTINCT b.agent_id) as agent_count,
-        COALESCE(SUM(b.balance), 0) as total_balance
-    FROM sites s
-    LEFT JOIN branches b ON s.id = b.site_id
-    GROUP BY s.id
-    ORDER BY s.name
-");
-$sites = $stmt->fetchAll();
+if (!hasModuleAccess('sites')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+$accessible_site_ids = getAccessibleSiteIds();
+if (empty($accessible_site_ids)) {
+    $sites = [];
+} else {
+    $placeholders = implode(',', array_fill(0, count($accessible_site_ids), '?'));
+    $stmt = $pdo->prepare("
+        SELECT 
+            s.*,
+            COUNT(DISTINCT b.id) as branch_count,
+            COUNT(DISTINCT b.agent_id) as agent_count,
+            COALESCE(SUM(b.balance), 0) as total_balance
+        FROM sites s
+        LEFT JOIN branches b ON s.id = b.site_id
+        WHERE s.id IN ($placeholders)
+        GROUP BY s.id
+        ORDER BY s.name
+    ");
+    $stmt->execute($accessible_site_ids);
+    $sites = $stmt->fetchAll();
+}
+
+$has_full_access = hasFullAccess('sites');
 
 include '../includes/header.php';
 ?>
@@ -22,7 +36,9 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Sites Management</h1>
+        <?php if ($has_full_access): ?>
         <button onclick="showCreateSiteModal()" class="btn btn-primary">+ Create New Site</button>
+        <?php endif; ?>
     </div>
     
     <div class="table-responsive">

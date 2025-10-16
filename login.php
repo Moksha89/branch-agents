@@ -22,11 +22,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $admin = $stmt->fetch();
     
     if ($admin && password_verify($password, $admin['password'])) {
+        $_SESSION['user_type'] = 'admin';
         $_SESSION['admin_id'] = $admin['id'];
         $_SESSION['admin_mobile'] = $admin['mobile'];
         redirect(SITE_URL . '/dashboard.php');
     } else {
-        $error = 'Invalid mobile number or password';
+        $stmt = $pdo->prepare("SELECT * FROM employees WHERE mobile = ? AND is_active = TRUE");
+        $stmt->execute([$mobile]);
+        $employee = $stmt->fetch();
+        
+        if ($employee && password_verify($password, $employee['password'])) {
+            $_SESSION['user_type'] = 'employee';
+            $_SESSION['employee_id'] = $employee['id'];
+            $_SESSION['employee_name'] = $employee['name'];
+            $_SESSION['employee_mobile'] = $employee['mobile'];
+            
+            loadEmployeePermissions($employee['id']);
+            
+            redirect(SITE_URL . '/dashboard.php');
+        } else {
+            $error = 'Invalid mobile number or password';
+        }
     }
 }
 ?>

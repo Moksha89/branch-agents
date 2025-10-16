@@ -3,6 +3,10 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasModuleAccess('agents')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
 $stmt = $pdo->query("
     SELECT 
         a.id,
@@ -34,7 +38,9 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Agents Management</h1>
+        <?php if ($has_full_access): ?>
         <button onclick="showCreateAgentModal()" class="btn btn-primary">+ Create New Agent</button>
+        <?php endif; ?>
     </div>
     
     <div class="table-responsive">
@@ -77,10 +83,12 @@ include '../includes/header.php';
                             </td>
                             <td>
                                 <a href="view.php?id=<?php echo $agent['id']; ?>" class="btn btn-sm btn-info">View</a>
+                                <?php if ($has_full_access): ?>
                                 <button class="btn btn-sm btn-warning" onclick="showEditAgentModal(<?php echo $agent['id']; ?>, '<?php echo htmlspecialchars($agent['name'], ENT_QUOTES); ?>', <?php echo json_encode(explode(', ', $agent['phones'] ?? '')); ?>)">Edit</button>
                                 <button onclick="toggleAgentStatus(<?php echo $agent['id']; ?>, <?php echo $agent['is_active'] ? 'true' : 'false'; ?>)" class="btn btn-sm <?php echo $agent['is_active'] ? 'btn-secondary' : 'btn-success'; ?>">
                                     <?php echo $agent['is_active'] ? 'Deactivate' : 'Activate'; ?>
                                 </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
