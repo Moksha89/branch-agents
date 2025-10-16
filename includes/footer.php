@@ -12,21 +12,29 @@ $(document).ready(function() {
         try {
             $('.data-table').each(function() {
                 const $table = $(this);
-                if ($table.find('tbody tr').length > 0) {
-                    $table.DataTable({
-                        "pageLength": 25,
-                        "order": [],
-                        "language": {
-                            "search": "Search:",
-                            "lengthMenu": "Show _MENU_ entries",
-                            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
-                            "infoEmpty": "Showing 0 to 0 of 0 entries",
-                            "infoFiltered": "(filtered from _TOTAL_ total entries)",
-                            "zeroRecords": "No matching records found",
-                            "emptyTable": "No data available in table"
-                        }
-                    });
+                const $rows = $table.find('tbody tr');
+                
+                if ($rows.length === 0) {
+                    return;
                 }
+                
+                if ($rows.length === 1 && $rows.first().find('td[colspan]').length > 0) {
+                    return;
+                }
+                
+                $table.DataTable({
+                    "pageLength": 25,
+                    "order": [],
+                    "language": {
+                        "search": "Search:",
+                        "lengthMenu": "Show _MENU_ entries",
+                        "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                        "infoEmpty": "Showing 0 to 0 of 0 entries",
+                        "infoFiltered": "(filtered from _TOTAL_ total entries)",
+                        "zeroRecords": "No matching records found",
+                        "emptyTable": "No data available in table"
+                    }
+                });
             });
         } catch (error) {
             console.error('DataTables initialization error:', error);
