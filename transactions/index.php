@@ -45,7 +45,7 @@ $stmt = $pdo->prepare("
         t.*,
         s.name as sender_name,
         r.name as receiver_name,
-        u.name as created_by_name
+        u.mobile as created_by_mobile
     FROM transactions t
     LEFT JOIN agents s ON t.sender_id = s.id
     LEFT JOIN agents r ON t.receiver_id = r.id
@@ -171,7 +171,7 @@ include '../includes/header.php';
                                         <strong><?php echo formatCurrency($txn['receiver_closing_balance']); ?></strong>
                                     </td>
                                     <td><?php echo htmlspecialchars($txn['remarks'] ?: '-'); ?></td>
-                                    <td><?php echo htmlspecialchars($txn['created_by_name'] ?: 'System'); ?></td>
+                                    <td><?php echo htmlspecialchars($txn['created_by_mobile'] ?: 'System'); ?></td>
                                     <td>
                                         <a href="view.php?id=<?php echo $txn['id']; ?>" class="btn btn-sm btn-info">View</a>
                                         <?php if (hasFullAccess('transactions')): ?>

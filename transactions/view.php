@@ -18,7 +18,7 @@ $stmt = $pdo->prepare("
         t.*,
         s.name as sender_name,
         r.name as receiver_name,
-        u.name as created_by_name
+        u.mobile as created_by_mobile
     FROM transactions t
     LEFT JOIN agents s ON t.sender_id = s.id
     LEFT JOIN agents r ON t.receiver_id = r.id
@@ -66,7 +66,7 @@ include '../includes/header.php';
                 
                 <div class="info-item">
                     <label>Created By</label>
-                    <strong><?php echo htmlspecialchars($transaction['created_by_name'] ?: 'System'); ?></strong>
+                    <strong><?php echo htmlspecialchars($transaction['created_by_mobile'] ?: 'System'); ?></strong>
                 </div>
             </div>
             
