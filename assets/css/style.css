@@ -589,6 +589,7 @@ td.text-danger {
 .icon-site::before { content: "\f1ad"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 8px; }
 .icon-branch::before { content: "\f015"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 8px; }
 .icon-agent::before { content: "\f007"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 8px; }
+.icon-transaction::before { content: "\f362"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 8px; }
 .icon-report::before { content: "\f080"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 8px; }
 .icon-settings::before { content: "\f013"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 8px; }
 .icon-logout::before { content: "\f2f5"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 8px; }
