@@ -341,4 +341,85 @@ window.onclick = function(event) {
 }
 </script>
 
+<script>
+function softDelete(transId) {
+    if (!confirm('Soft delete this transaction? Balances will be recalculated.')) {
+        return;
+    }
+    
+    fetch('<?php echo SITE_URL; ?>/api/soft_delete_transaction.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'transaction_id=' + transId
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Transaction soft deleted successfully');
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+    });
+}
+
+function restoreTrans(transId) {
+    if (!confirm('Restore this transaction? Balances will be recalculated.')) {
+        return;
+    }
+    
+    fetch('<?php echo SITE_URL; ?>/api/restore_transaction.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'transaction_id=' + transId
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Transaction restored successfully');
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+    });
+}
+
+function permanentDelete(transId) {
+    if (!confirm('PERMANENTLY delete this transaction? This CANNOT be undone!')) {
+        return;
+    }
+    
+    if (!confirm('Are you absolutely sure? This will remove the transaction completely from the database.')) {
+        return;
+    }
+    
+    fetch('<?php echo SITE_URL; ?>/api/permanent_delete_transaction.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'transaction_id=' + transId
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Transaction permanently deleted');
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+    });
+}
+</script>
+
 <?php include '../includes/footer.php'; ?>
