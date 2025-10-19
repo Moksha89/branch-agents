@@ -154,4 +154,32 @@ $('#createSiteForm').on('submit', function(e) {
 });
 </script>
 
+<script>
+function toggleSiteStatus(siteId, newStatus) {
+    const action = newStatus ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} this site?`)) {
+        return;
+    }
+    
+    fetch('<?php echo SITE_URL; ?>/api/toggle_site_status.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `site_id=${siteId}&status=${newStatus}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+    });
+}
+</script>
+
 <?php include '../includes/footer.php'; ?>

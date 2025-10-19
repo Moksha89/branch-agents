@@ -361,4 +361,32 @@ $('#editAgentForm').on('submit', function(e) {
 });
 </script>
 
+<script>
+function toggleAgentStatus(agentId, newStatus) {
+    const action = newStatus ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} this agent?`)) {
+        return;
+    }
+    
+    fetch('<?php echo SITE_URL; ?>/api/toggle_agent_active_status.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `agent_id=${agentId}&status=${newStatus}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+    });
+}
+</script>
+
 <?php include '../includes/footer.php'; ?>
