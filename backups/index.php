@@ -66,8 +66,8 @@ include '../includes/header.php';
                                     <td><?php echo htmlspecialchars($backup['file_url']); ?></td>
                                     <td><?php echo htmlspecialchars($backup['created_by_mobile'] ?: 'System'); ?></td>
                                     <td>
-                                        <a href="<?php echo SITE_URL; ?>/api/download_backup.php?id=<?php echo $backup['id']; ?>" 
-                                           class="btn btn-sm btn-info">Download</a>
+                                        <button onclick="downloadBackup(<?php echo $backup['id']; ?>, '<?php echo htmlspecialchars($backup['file_url']); ?>')" 
+                                                class="btn btn-sm btn-info">Download</button>
                                         <button class="btn btn-sm btn-warning" 
                                                 onclick="restoreBackup(<?php echo $backup['id']; ?>)">Restore</button>
                                         <button class="btn btn-sm btn-danger" 
@@ -152,6 +152,33 @@ function createBackup() {
         alert('An error occurred while creating the backup');
         btn.disabled = false;
         btn.textContent = 'Create Backup';
+    });
+}
+
+function downloadBackup(id, filename) {
+    fetch('<?php echo SITE_URL; ?>/api/download_backup.php?id=' + id, {
+        method: 'GET',
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Download failed');
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error downloading backup: ' + error.message);
     });
 }
 

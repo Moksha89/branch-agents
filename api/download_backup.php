@@ -29,6 +29,8 @@ try {
         die('Backup file not found on server');
     }
     
+    session_write_close();
+    
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename="' . $backup['file_url'] . '"');
     header('Content-Length: ' . filesize($backupFilePath));
