@@ -1,6 +1,7 @@
 <?php
 require_once 'config/config.php';
 require_once 'config/database.php';
+require_once 'config/helpers.php';
 
 $stmt = $pdo->query("SELECT * FROM portal_settings WHERE id = 1");
 $portalSettings = $stmt->fetch();
@@ -22,11 +23,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $admin = $stmt->fetch();
     
     if ($admin && password_verify($password, $admin['password'])) {
-        $_SESSION['user_type'] = 'admin';
-        $_SESSION['admin_id'] = $admin['id'];
-        $_SESSION['admin_mobile'] = $admin['mobile'];
-        redirect(SITE_URL . '/dashboard.php');
-    } else {
+        if (isset($admin['expiry_date']) && $admin['expiry_date'] && strtotime($admin['expiry_date']) < time()) {
+            $error = "Your account has expired. Contact administrator.";
+        } else {
+            $deviceCheckPassed = true;
+            if (isset($admin['first_device_id']) && !empty($admin['first_device_id'])) {
+                $currentDeviceId = isset($_COOKIE['device_id']) ? $_COOKIE['device_id'] : '';
+                if ($currentDeviceId !== $admin['first_device_id']) {
+                    $error = "Device limit reached. Contact administrator to reset your device.";
+                    $deviceCheckPassed = false;
+                }
+            }
+            
+            if ($deviceCheckPassed) {
+                if (empty($admin['first_device_id'])) {
+                    $deviceId = generateDeviceId();
+                    $stmt = $pdo->prepare("UPDATE admins SET first_device_id = ? WHERE id = ?");
+                    $stmt->execute([$deviceId, $admin['id']]);
+                    setcookie('device_id', $deviceId, time() + (365 * 24 * 60 * 60), '/');
+                } else {
+                    setcookie('device_id', $admin['first_device_id'], time() + (365 * 24 * 60 * 60), '/');
+                }
+                
+                $_SESSION['user_type'] = 'admin';
+                $_SESSION['admin_id'] = $admin['id'];
+                $_SESSION['admin_mobile'] = $admin['mobile'];
+                redirect(SITE_URL . '/dashboard.php');
+            }
+        }
+    }
+    
+    if (!isset($error) || empty($error)) {
         $stmt = $pdo->prepare("SELECT * FROM employees WHERE mobile = ? AND is_active = TRUE");
         $stmt->execute([$mobile]);
         $employee = $stmt->fetch();
