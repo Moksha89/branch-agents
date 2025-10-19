@@ -55,6 +55,24 @@ try {
     ");
     $stmt->execute([$timestamp, $backupFileName, $_SESSION['admin_id']]);
     
+    $stmt = $pdo->query("SELECT email FROM backup_emails");
+    $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    if (!empty($emails)) {
+        $subject = "Hisaab Backup Created - " . date('Y-m-d H:i:s');
+        $fileSize = filesize($backupFilePath);
+        $message = "A new backup has been created:\n\n";
+        $message .= "Filename: $backupFileName\n";
+        $message .= "File size: " . number_format($fileSize / 1024, 2) . " KB\n";
+        $message .= "Created at: " . date('Y-m-d H:i:s') . "\n";
+        $message .= "Created by: Admin\n\n";
+        $message .= "Login to the Hisaab portal to download the backup.";
+        
+        foreach ($emails as $email) {
+            @mail($email, $subject, $message);
+        }
+    }
+    
     echo json_encode([
         'success' => true,
         'backup_file' => $backupFileName,
