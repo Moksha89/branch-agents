@@ -1,7 +1,7 @@
 ALTER TABLE whatsapp_config
-ADD COLUMN IF NOT EXISTS api_type ENUM('web', 'business') DEFAULT 'web' AFTER session_token,
-ADD COLUMN IF NOT EXISTS facebook_app_id VARCHAR(255) AFTER api_type,
-ADD COLUMN IF NOT EXISTS facebook_app_secret VARCHAR(255) AFTER facebook_app_id;
+ADD COLUMN api_type ENUM('web', 'business') DEFAULT 'web' AFTER session_token,
+ADD COLUMN facebook_app_id VARCHAR(255) AFTER api_type,
+ADD COLUMN facebook_app_secret VARCHAR(255) AFTER facebook_app_id;
 
 ALTER TABLE whatsapp_config 
 MODIFY COLUMN phone_number_id VARCHAR(255) COMMENT 'WhatsApp Business API Phone Number ID (for Business API only)',
