@@ -74,6 +74,12 @@ $logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' .
             </a>
             <?php endif; ?>
             
+            <?php if (isAdmin()): ?>
+            <a href="<?php echo SITE_URL; ?>/backups/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/backups/') !== false ? 'active' : ''; ?>">
+                <i class="icon">📦</i> Backups
+            </a>
+            <?php endif; ?>
+            
             <?php if (hasModuleAccess('masters')): ?>
             <a href="<?php echo SITE_URL; ?>/masters/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/masters/') !== false ? 'active' : ''; ?>">
                 <i class="icon-agent"></i> Masters

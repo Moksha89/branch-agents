@@ -44,6 +44,8 @@ include '../includes/header.php';
     <div class="page-header">
         <h1>Site: <?php echo htmlspecialchars($site['name']); ?></h1>
         <div>
+            <a href="<?php echo SITE_URL; ?>/api/export_site_pdf.php?site_id=<?php echo $site['id']; ?>" 
+               class="btn btn-info" target="_blank">Export PDF</a>
             <button onclick="showCreateBranchModal()" class="btn btn-primary">+ Create Branch</button>
             <button type="button" class="btn btn-success" onclick="showBulkUpdateModal()">💰 Bulk Update Amounts</button>
             <a href="index.php" class="btn btn-secondary">← Back to Sites</a>

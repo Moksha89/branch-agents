@@ -116,6 +116,21 @@ function redirect($url) {
     exit;
 }
 
+function encryptBackupData($data) {
+    $key = hash('sha256', DB_PASS . SITE_URL, true);
+    $iv = openssl_random_pseudo_bytes(16);
+    $encrypted = openssl_encrypt($data, 'AES-256-CBC', $key, 0, $iv);
+    return base64_encode($iv . $encrypted);
+}
+
+function decryptBackupData($data) {
+    $key = hash('sha256', DB_PASS . SITE_URL, true);
+    $data = base64_decode($data);
+    $iv = substr($data, 0, 16);
+    $encrypted = substr($data, 16);
+    return openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
+}
+
 function formatCurrency($amount) {
     return '₹' . number_format($amount, 2);
 }

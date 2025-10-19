@@ -12,8 +12,7 @@ if (empty($accessible_branch_ids)) {
     $agentReports = [];
     $grandTotal = 0;
 } else {
-    $placeholders = implode(',', array_fill(0, count($accessible_branch_ids), '?'));
-    $stmt = $pdo->prepare("
+    $stmt = $pdo->query("
     SELECT 
         a.id,
         a.name as agent_name,
@@ -25,24 +24,26 @@ if (empty($accessible_branch_ids)) {
     LEFT JOIN agent_phones ap ON a.id = ap.agent_id
     LEFT JOIN (
         SELECT 
-            b.agent_id,
-            COUNT(b.id) as branch_count,
+            ab.agent_id,
+            COUNT(DISTINCT b.id) as branch_count,
             GROUP_CONCAT(DISTINCT
                 CONCAT(s.name, ' - ', b.branch_code, ': ', b.balance) 
                 ORDER BY s.name, b.branch_code SEPARATOR ' | '
             ) as branch_details,
             SUM(b.balance) as total_balance
-        FROM branches b
+        FROM agent_branches ab
+        JOIN branches b ON ab.branch_id = b.id
         LEFT JOIN sites s ON b.site_id = s.id
-        GROUP BY b.agent_id
+        GROUP BY ab.agent_id
     ) branch_data ON a.id = branch_data.agent_id
-    WHERE a.is_active = TRUE
+    WHERE a.status = 'active'
     GROUP BY a.id
     ORDER BY total_balance DESC
 ");
-$agentReports = $stmt->fetchAll();
-
-$grandTotal = array_sum(array_column($agentReports, 'total_balance'));
+    $agentReports = $stmt->fetchAll();
+    
+    $grandTotal = array_sum(array_column($agentReports, 'total_balance'));
+}
 
 include '../includes/header.php';
 ?>
@@ -92,6 +93,10 @@ include '../includes/header.php';
                                         class="btn btn-sm whatsapp-btn" data-agent-id="<?php echo $report['id']; ?>">
                                     📱 Send Report
                                 </button>
+                                <a href="<?php echo SITE_URL; ?>/api/export_agent_pdf.php?agent_id=<?php echo $report['id']; ?>" 
+                                   class="btn btn-sm btn-info" target="_blank">
+                                    Export PDF
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -1,0 +1,5 @@
+# Ignore all backup files
+*.hbx
+
+# But keep this .gitignore file
+!.gitignore
