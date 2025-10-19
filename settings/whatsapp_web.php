@@ -30,6 +30,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_facebook_config'])) {
+    $facebookAppId = sanitizeInput($_POST['facebook_app_id']);
+    $facebookAppSecret = sanitizeInput($_POST['facebook_app_secret']);
+    $phoneNumberId = sanitizeInput($_POST['phone_number_id']);
+    
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE whatsapp_config 
+            SET facebook_app_id = ?, facebook_app_secret = ?, phone_number_id = ? 
+            WHERE id = 1
+        ");
+        $stmt->execute([$facebookAppId, $facebookAppSecret, $phoneNumberId]);
+        $success = 'Facebook Business Manager configuration saved successfully';
+    } catch (PDOException $e) {
+        $error = 'Error saving configuration: ' . $e->getMessage();
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_templates'])) {
     $headerTemplate = sanitizeInput($_POST['header_template']);
     $footerTemplate = sanitizeInput($_POST['footer_template']);
@@ -90,14 +108,70 @@ include '../includes/header.php';
         </form>
     </div>
     
-    <?php if ($apiUrl && $apiKey): ?>
-    <div class="form-container">
-        <h3>WhatsApp Connection Status</h3>
+    <div class="form-container" style="margin-top: 30px;">
+        <h3>📘 Facebook Business Manager Integration</h3>
+        <p class="text-muted">Connect your Facebook Business Manager account to use WhatsApp Business API</p>
         
-        <div id="connection-status" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
-            <p style="margin: 0;"><strong>Status:</strong> <span id="status-text" class="badge" style="background: #6c757d;">Checking...</span></p>
-            <p id="status-detail" style="margin: 5px 0 0 0; font-size: 14px; color: #666;"></p>
+        <form method="POST">
+            <div class="form-group">
+                <label for="facebook_app_id">Facebook App ID</label>
+                <input type="text" id="facebook_app_id" name="facebook_app_id" 
+                       value="<?php echo htmlspecialchars($config['facebook_app_id'] ?? ''); ?>"
+                       placeholder="Your Facebook App ID">
+                <small>From your Facebook Developer Console</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="facebook_app_secret">Facebook App Secret</label>
+                <input type="password" id="facebook_app_secret" name="facebook_app_secret" 
+                       value="<?php echo htmlspecialchars($config['facebook_app_secret'] ?? ''); ?>"
+                       placeholder="Your Facebook App Secret">
+                <small>Keep this secret secure</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone_number_id">WhatsApp Phone Number ID</label>
+                <input type="text" id="phone_number_id" name="phone_number_id" 
+                       value="<?php echo htmlspecialchars($config['phone_number_id'] ?? ''); ?>"
+                       placeholder="Your WhatsApp Business Phone Number ID">
+                <small>From WhatsApp Business API setup in Facebook Business Manager</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" name="save_facebook_config" class="btn btn-primary">Save Facebook Configuration</button>
+            </div>
+        </form>
+    </div>
+    
+    <?php if ($apiUrl && $apiKey): ?>
+    <div class="form-container" style="margin-top: 30px;">
+        <h3>🔐 Select Authentication Method</h3>
+        <p class="text-muted">Choose how you want to authenticate WhatsApp</p>
+        
+        <div style="margin: 20px 0;">
+            <label style="display: block; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 4px; cursor: pointer; border: 2px solid transparent;" id="web-auth-label">
+                <input type="radio" name="auth_method" value="web" 
+                       <?php echo (!$config['api_type'] || $config['api_type'] === 'web') ? 'checked' : ''; ?>
+                       onchange="switchAuthMethod('web')" style="margin-right: 10px;"> 
+                <strong>WhatsApp Web (QR Code)</strong> - Free, requires QR scanning<br>
+                <small style="color: #666; margin-left: 28px;">Best for personal/small business use. Requires phone to stay online.</small>
+            </label>
+            
+            <label style="display: block; padding: 15px; background: #f8f9fa; border-radius: 4px; cursor: pointer; border: 2px solid transparent;" id="business-auth-label">
+                <input type="radio" name="auth_method" value="business" 
+                       <?php echo ($config['api_type'] === 'business') ? 'checked' : ''; ?>
+                       onchange="switchAuthMethod('business')" style="margin-right: 10px;"> 
+                <strong>WhatsApp Business API (Facebook)</strong> - Paid, OAuth2 login<br>
+                <small style="color: #666; margin-left: 28px;">Enterprise-grade. ~$50-100/month + per-message fees. Requires Facebook Business Manager.</small>
+            </label>
         </div>
+        
+        <div id="web-auth-section" style="<?php echo ($config['api_type'] === 'business') ? 'display: none;' : ''; ?>">
+            <h4>📱 WhatsApp Web Connection</h4>
+            <div id="connection-status" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                <p style="margin: 0;"><strong>Status:</strong> <span id="status-text" class="badge" style="background: #6c757d;">Checking...</span></p>
+                <p id="status-detail" style="margin: 5px 0 0 0; font-size: 14px; color: #666;"></p>
+            </div>
         
         <div id="qr-code-section" style="display: none; text-align: center; padding: 20px; background: white; border: 2px dashed #ddd; border-radius: 8px;">
             <h4 style="margin-top: 0;">Scan QR Code with Your WhatsApp</h4>
@@ -127,13 +201,52 @@ include '../includes/header.php';
             </button>
         </div>
         
-        <div style="margin-top: 20px;">
-            <button onclick="createSession()" class="btn btn-primary" id="connect-btn">
-                <i class="icon">🔗</i> Connect WhatsApp
-            </button>
-            <button onclick="checkStatus()" class="btn btn-secondary" id="refresh-btn">
-                <i class="icon">🔄</i> Refresh Status
-            </button>
+            <div style="margin-top: 20px;">
+                <button onclick="createSession()" class="btn btn-primary" id="connect-btn">
+                    <i class="icon">🔗</i> Connect WhatsApp
+                </button>
+                <button onclick="checkStatus()" class="btn btn-secondary" id="refresh-btn">
+                    <i class="icon">🔄</i> Refresh Status
+                </button>
+            </div>
+        </div>
+        
+        <div id="business-auth-section" style="<?php echo ($config['api_type'] === 'web' || !$config['api_type']) ? 'display: none;' : ''; ?>">
+            <h4>📘 WhatsApp Business API (Facebook)</h4>
+            
+            <div id="business-connection-status" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                <p style="margin: 0;"><strong>Status:</strong> 
+                    <span class="badge" style="background: <?php echo ($config['access_token'] && $config['api_type'] === 'business') ? '#28a745' : '#dc3545'; ?>;">
+                        <?php echo ($config['access_token'] && $config['api_type'] === 'business') ? 'Connected' : 'Not Connected'; ?>
+                    </span>
+                </p>
+                <?php if ($config['access_token'] && $config['api_type'] === 'business'): ?>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">
+                        Phone Number ID: <?php echo htmlspecialchars($config['phone_number_id']); ?>
+                    </p>
+                <?php endif; ?>
+            </div>
+            
+            <?php if (!$config['access_token'] || $config['api_type'] !== 'business'): ?>
+                <?php if ($config['facebook_app_id'] && $config['facebook_app_secret'] && $config['phone_number_id']): ?>
+                    <button onclick="loginWithFacebook()" class="btn btn-primary">
+                        <i class="icon">📘</i> Login with Facebook Business Manager
+                    </button>
+                    <p class="text-muted" style="margin-top: 10px; font-size: 13px;">
+                        You will be redirected to Facebook to authorize WhatsApp Business API access.
+                    </p>
+                <?php else: ?>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Configuration Required</strong><br>
+                        Please configure Facebook App ID, App Secret, and Phone Number ID above before connecting.
+                    </div>
+                <?php endif; ?>
+            <?php else: ?>
+                <div class="alert alert-success">
+                    <strong>✓ WhatsApp Business API Connected!</strong><br>
+                    <p style="margin: 10px 0 0 0;">You can now send reports to agents using WhatsApp Business API.</p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
     
@@ -341,9 +454,50 @@ function stopStatusChecking() {
     }
 }
 
+function switchAuthMethod(method) {
+    $.post(SITE_URL + '/api/switch_auth_method.php', { 
+        auth_method: method 
+    }, function(response) {
+        if (response.success) {
+            if (method === 'web') {
+                document.getElementById('web-auth-section').style.display = 'block';
+                document.getElementById('business-auth-section').style.display = 'none';
+                document.getElementById('web-auth-label').style.borderColor = '#FFC107';
+                document.getElementById('business-auth-label').style.borderColor = 'transparent';
+            } else {
+                document.getElementById('web-auth-section').style.display = 'none';
+                document.getElementById('business-auth-section').style.display = 'block';
+                document.getElementById('web-auth-label').style.borderColor = 'transparent';
+                document.getElementById('business-auth-label').style.borderColor = '#FFC107';
+            }
+        } else {
+            alert('Error switching authentication method: ' + response.error);
+        }
+    }).fail(function() {
+        alert('Failed to switch authentication method');
+    });
+}
+
+function loginWithFacebook() {
+    const appId = '<?php echo $config['facebook_app_id'] ?? ''; ?>';
+    const redirectUri = encodeURIComponent('<?php echo SITE_URL; ?>/api/facebook_oauth_callback.php');
+    const scope = 'whatsapp_business_management,whatsapp_business_messaging';
+    
+    const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
+    
+    window.location.href = authUrl;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    if (API_URL && API_KEY) {
-        checkStatus();
+    const apiType = '<?php echo $config['api_type'] ?? 'web'; ?>';
+    
+    if (apiType === 'web') {
+        document.getElementById('web-auth-label').style.borderColor = '#FFC107';
+        if (API_URL && API_KEY) {
+            checkStatus();
+        }
+    } else {
+        document.getElementById('business-auth-label').style.borderColor = '#FFC107';
     }
 });
 </script>
