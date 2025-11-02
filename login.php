@@ -1,6 +1,12 @@
 <?php
 require_once 'config/config.php';
 require_once 'config/database.php';
+require_once 'config/helpers.php';
+
+$stmt = $pdo->query("SELECT * FROM portal_settings WHERE id = 1");
+$portalSettings = $stmt->fetch();
+$portalName = $portalSettings ? $portalSettings['portal_name'] : 'Hisaab Portal';
+$logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' . $portalSettings['logo_path'] : null;
 
 if (isLoggedIn()) {
     redirect(SITE_URL . '/dashboard.php');
@@ -17,11 +23,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $admin = $stmt->fetch();
     
     if ($admin && password_verify($password, $admin['password'])) {
-        $_SESSION['admin_id'] = $admin['id'];
-        $_SESSION['admin_mobile'] = $admin['mobile'];
-        redirect(SITE_URL . '/dashboard.php');
-    } else {
-        $error = 'Invalid mobile number or password';
+        if (isset($admin['expiry_date']) && $admin['expiry_date'] && strtotime($admin['expiry_date']) < time()) {
+            $error = "Your account has expired. Contact administrator.";
+        } else {
+            $deviceCheckPassed = true;
+            if (isset($admin['first_device_id']) && !empty($admin['first_device_id'])) {
+                $currentDeviceId = isset($_COOKIE['device_id']) ? $_COOKIE['device_id'] : '';
+                if ($currentDeviceId !== $admin['first_device_id']) {
+                    $error = "Device limit reached. Contact administrator to reset your device.";
+                    $deviceCheckPassed = false;
+                }
+            }
+            
+            if ($deviceCheckPassed) {
+                if (empty($admin['first_device_id'])) {
+                    $deviceId = generateDeviceId();
+                    $stmt = $pdo->prepare("UPDATE admins SET first_device_id = ? WHERE id = ?");
+                    $stmt->execute([$deviceId, $admin['id']]);
+                    setcookie('device_id', $deviceId, time() + (365 * 24 * 60 * 60), '/');
+                } else {
+                    setcookie('device_id', $admin['first_device_id'], time() + (365 * 24 * 60 * 60), '/');
+                }
+                
+                $_SESSION['user_type'] = 'admin';
+                $_SESSION['admin_id'] = $admin['id'];
+                $_SESSION['admin_mobile'] = $admin['mobile'];
+                redirect(SITE_URL . '/dashboard.php');
+            }
+        }
+    }
+    
+    if (!isset($error) || empty($error)) {
+        $stmt = $pdo->prepare("SELECT * FROM employees WHERE mobile = ? AND is_active = TRUE");
+        $stmt->execute([$mobile]);
+        $employee = $stmt->fetch();
+        
+        if ($employee && password_verify($password, $employee['password'])) {
+            $_SESSION['user_type'] = 'employee';
+            $_SESSION['employee_id'] = $employee['id'];
+            $_SESSION['employee_name'] = $employee['name'];
+            $_SESSION['employee_mobile'] = $employee['mobile'];
+            
+            loadEmployeePermissions($employee['id']);
+            
+            redirect(SITE_URL . '/dashboard.php');
+        } else {
+            $error = 'Invalid mobile number or password';
+        }
     }
 }
 ?>
@@ -30,14 +78,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - <?php echo SITE_NAME; ?></title>
+    <title>Login - <?php echo htmlspecialchars($portalName); ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="login-page">
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <h1>Hisaab</h1>
+                <?php if ($logoPath): ?>
+                    <img src="<?php echo $logoPath; ?>" alt="Logo" style="max-width: 200px; max-height: 80px; margin-bottom: 15px;">
+                <?php endif; ?>
+                <h1><?php echo htmlspecialchars($portalName); ?></h1>
                 <p>Portal Management System</p>
             </div>
             

@@ -20,20 +20,16 @@ if (!$site) {
 $stmt = $pdo->prepare("
     SELECT 
         b.*,
-        GROUP_CONCAT(
-            CONCAT(a.name, ' (', ap.phone, ')') 
-            ORDER BY a.name SEPARATOR ', '
-        ) as agents_with_phones
+        a.name as agent_name,
+        ap.phone as agent_phone
     FROM branches b
-    LEFT JOIN agent_branches ab ON b.id = ab.branch_id
-    LEFT JOIN agents a ON ab.agent_id = a.id
+    LEFT JOIN agents a ON b.agent_id = a.id
     LEFT JOIN (
         SELECT agent_id, MIN(phone) as phone 
         FROM agent_phones 
         GROUP BY agent_id
     ) ap ON a.id = ap.agent_id
     WHERE b.site_id = ?
-    GROUP BY b.id
     ORDER BY b.branch_code
 ");
 $stmt->execute([$siteId]);
@@ -48,7 +44,10 @@ include '../includes/header.php';
     <div class="page-header">
         <h1>Site: <?php echo htmlspecialchars($site['name']); ?></h1>
         <div>
-            <a href="edit.php?id=<?php echo $siteId; ?>" class="btn btn-warning">Edit Site</a>
+            <a href="<?php echo SITE_URL; ?>/api/export_site_pdf.php?site_id=<?php echo $site['id']; ?>" 
+               class="btn btn-info" target="_blank">Export PDF</a>
+            <button onclick="showCreateBranchModal()" class="btn btn-primary">+ Create Branch</button>
+            <button type="button" class="btn btn-success" onclick="showBulkUpdateModal()">💰 Bulk Update Amounts</button>
             <a href="index.php" class="btn btn-secondary">← Back to Sites</a>
         </div>
     </div>
@@ -77,42 +76,512 @@ include '../includes/header.php';
     
     <div class="table-responsive">
         <h2>Branches</h2>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Branch Code</th>
-                    <th>Balance</th>
-                    <th>Assigned Agents</th>
-                    <th>Last Updated</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($branches)): ?>
+        <?php if (empty($branches)): ?>
+            <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                <p style="color: #6B7280; font-size: 14px;">No branches found. Click the "+ Create Branch" button above to add one.</p>
+            </div>
+        <?php else: ?>
+            <table class="table data-table" id="branchesTable">
+                <thead>
                     <tr>
-                        <td colspan="4" class="text-center">No branches found. <a href="../branches/create.php">Create a branch</a></td>
+                        <th>Branch Code</th>
+                        <th>Balance</th>
+                        <th>Assigned Agent</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
                     </tr>
-                <?php else: ?>
+                </thead>
+                <tbody>
+                    <?php foreach ($branches as $branch): ?>
+                        <tr data-branch-id="<?php echo $branch['id']; ?>">
+                            <td><strong><?php echo htmlspecialchars($branch['branch_code']); ?></strong></td>
+                            <td>
+                                <span class="balance-display <?php echo $branch['balance'] < 0 ? 'text-success' : 'text-danger'; ?>" 
+                                      id="balance-display-<?php echo $branch['id']; ?>">
+                                    <?php echo formatCurrency($branch['balance']); ?>
+                                </span>
+                                <span class="balance-edit-controls" id="balance-edit-<?php echo $branch['id']; ?>" style="display: none;">
+                                    <input type="number" step="0.01" class="form-control form-control-sm d-inline-block" 
+                                           id="balance-input-<?php echo $branch['id']; ?>" 
+                                           value="<?php echo $branch['balance']; ?>" 
+                                           style="width: 150px;">
+                                    <button class="btn btn-sm btn-success" onclick="saveBalance(<?php echo $branch['id']; ?>)">✓ OK</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="cancelEditBalance(<?php echo $branch['id']; ?>)">✗</button>
+                                </span>
+                            </td>
+                            <td><?php echo $branch['agent_name'] ? htmlspecialchars($branch['agent_name'] . ' (' . $branch['agent_phone'] . ')') : 'No agent'; ?></td>
+                            <td><?php echo date('d-M-Y H:i', strtotime($branch['updated_at'])); ?></td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="editBalance(<?php echo $branch['id']; ?>)">✏️ Edit Amount</button>
+                                <button class="btn btn-sm btn-info" onclick="showEditBranchModal(<?php echo $branch['id']; ?>, '<?php echo htmlspecialchars($branch['branch_code'], ENT_QUOTES); ?>', <?php echo $branch['balance']; ?>, <?php echo $branch['site_id']; ?>, <?php echo $branch['agent_id'] ? $branch['agent_id'] : 'null'; ?>)">Edit Branch</button>
+                                <?php if ($branch['agent_id']): ?>
+                                    <button class="btn btn-sm btn-danger" onclick="unassignAgent(<?php echo $branch['id']; ?>, '<?php echo htmlspecialchars($branch['branch_code'], ENT_QUOTES); ?>')">🚫 Unassign Agent</button>
+                                <?php else: ?>
+                                    <button class="btn btn-sm btn-success" onclick="showAssignAgentModal(<?php echo $branch['id']; ?>, '<?php echo htmlspecialchars($branch['branch_code'], ENT_QUOTES); ?>')">👤 Assign Agent</button>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f8f9fa; font-weight: bold;">
+                        <td>TOTAL</td>
+                        <td class="<?php echo $totalBalance < 0 ? 'text-success' : 'text-danger'; ?>">
+                            <?php echo formatCurrency($totalBalance); ?>
+                        </td>
+                        <td colspan="3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Create Branch Modal -->
+<div id="createBranchModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Branch</h2>
+            <span class="modal-close" onclick="closeCreateBranchModal()">&times;</span>
+        </div>
+        <form id="createBranchForm">
+            <input type="hidden" name="site_id" value="<?php echo $siteId; ?>">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Site</label>
+                    <input type="text" value="<?php echo htmlspecialchars($site['name']); ?>" disabled class="form-control">
+                    <small>Branch will be created under this site</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="branch_code">Branch Code *</label>
+                    <input type="text" id="branch_code" name="branch_code" required 
+                           placeholder="e.g., BR001, BR002" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="balance">Initial Balance *</label>
+                    <input type="number" id="balance" name="balance" step="0.01" required value="0" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="agent_id">Assign Agent (Optional)</label>
+                    <select id="agent_id" name="agent_id" class="form-control">
+                        <option value="">-- No Agent --</option>
+                        <?php
+                        $agentsStmt = $pdo->query("SELECT id, name FROM agents ORDER BY name");
+                        while ($agent = $agentsStmt->fetch()) {
+                            echo '<option value="'.$agent['id'].'">'.htmlspecialchars($agent['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateBranchModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Branch</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bulk Update Modal -->
+<div id="bulkUpdateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;">
+    <div style="background: white; width: 90%; max-width: 800px; margin: 50px auto; padding: 30px; border-radius: 10px; max-height: 80vh; overflow-y: auto;">
+        <h2>Bulk Update Branch Balances</h2>
+        <p>Update multiple branch balances at once. Leave fields blank to keep current values.</p>
+        
+        <form id="bulkUpdateForm">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Branch Code</th>
+                        <th>Current Balance</th>
+                        <th>New Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
                     <?php foreach ($branches as $branch): ?>
                         <tr>
                             <td><strong><?php echo htmlspecialchars($branch['branch_code']); ?></strong></td>
-                            <td class="<?php echo $branch['balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $branch['balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <?php echo formatCurrency($branch['balance']); ?>
                             </td>
-                            <td><?php echo htmlspecialchars($branch['agents_with_phones'] ?? 'No agents'); ?></td>
-                            <td><?php echo date('d-M-Y H:i', strtotime($branch['updated_at'])); ?></td>
+                            <td>
+                                <input type="number" step="0.01" class="form-control" 
+                                       name="balance[<?php echo $branch['id']; ?>]" 
+                                       placeholder="Leave blank to skip">
+                            </td>
                         </tr>
                     <?php endforeach; ?>
-                    <tr style="background: #f8f9fa; font-weight: bold;">
-                        <td>TOTAL</td>
-                        <td class="<?php echo $totalBalance < 0 ? 'text-danger' : 'text-success'; ?>">
-                            <?php echo formatCurrency($totalBalance); ?>
-                        </td>
-                        <td colspan="2"></td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+            
+            <div style="text-align: right; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeBulkUpdateModal()">Cancel</button>
+                <button type="submit" class="btn btn-success">💰 Update All</button>
+            </div>
+        </form>
     </div>
 </div>
+
+<!-- Edit Branch Modal -->
+<div id="editBranchModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Branch</h2>
+            <span class="modal-close" onclick="closeEditBranchModal()">&times;</span>
+        </div>
+        <form id="editBranchForm">
+            <input type="hidden" id="edit_branch_id" name="branch_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit_site_id">Site *</label>
+                    <select id="edit_site_id" name="site_id" required class="form-control">
+                        <option value="">Select Site</option>
+                        <?php
+                        $sitesStmt = $pdo->query("SELECT id, name FROM sites ORDER BY name");
+                        while ($siteOption = $sitesStmt->fetch()) {
+                            echo '<option value="'.$siteOption['id'].'">'.htmlspecialchars($siteOption['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_branch_code">Branch Code *</label>
+                    <input type="text" id="edit_branch_code" name="branch_code" required 
+                           placeholder="e.g., BR001, BR002" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_balance">Balance *</label>
+                    <input type="number" id="edit_balance" name="balance" step="0.01" required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_agent_id">Assign Agent (Optional)</label>
+                    <select id="edit_agent_id" name="agent_id" class="form-control">
+                        <option value="">-- No Agent --</option>
+                        <?php
+                        $agentsStmt = $pdo->query("SELECT id, name FROM agents ORDER BY name");
+                        while ($agent = $agentsStmt->fetch()) {
+                            echo '<option value="'.$agent['id'].'">'.htmlspecialchars($agent['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditBranchModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Branch</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Assign Agent Modal -->
+<div id="assignAgentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Assign Agent to Branch</h2>
+            <span class="modal-close" onclick="closeAssignAgentModal()">&times;</span>
+        </div>
+        <form id="assignAgentForm">
+            <input type="hidden" id="assign_branch_id" name="branch_id">
+            <input type="hidden" id="assign_branch_code" name="branch_code">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Branch</label>
+                    <input type="text" id="assign_branch_display" disabled class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="assign_agent_id">Select Agent *</label>
+                    <select id="assign_agent_id" name="agent_id" required class="form-control">
+                        <option value="">-- Select Agent --</option>
+                        <?php
+                        $agentsStmt = $pdo->query("SELECT id, name FROM agents WHERE status = 'active' ORDER BY name");
+                        while ($agent = $agentsStmt->fetch()) {
+                            echo '<option value="'.$agent['id'].'">'.htmlspecialchars($agent['name']).'</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAssignAgentModal()">Cancel</button>
+                <button type="submit" class="btn btn-success">👤 Assign Agent</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const SITE_URL = '<?php echo SITE_URL; ?>';
+const SITE_ID = <?php echo $siteId; ?>;
+
+function showCreateBranchModal() {
+    document.getElementById('createBranchModal').style.display = 'block';
+    document.getElementById('branch_code').focus();
+}
+
+function closeCreateBranchModal() {
+    document.getElementById('createBranchModal').style.display = 'none';
+    document.getElementById('createBranchForm').reset();
+}
+
+function editBalance(branchId) {
+    document.getElementById('balance-display-' + branchId).style.display = 'none';
+    document.getElementById('balance-edit-' + branchId).style.display = 'inline-block';
+    document.getElementById('balance-input-' + branchId).focus();
+}
+
+function cancelEditBalance(branchId) {
+    document.getElementById('balance-display-' + branchId).style.display = 'inline-block';
+    document.getElementById('balance-edit-' + branchId).style.display = 'none';
+}
+
+function saveBalance(branchId) {
+    const newBalance = document.getElementById('balance-input-' + branchId).value;
+    
+    $.ajax({
+        url: SITE_URL + '/api/update_balance.php',
+        method: 'POST',
+        data: {
+            branch_id: branchId,
+            balance: newBalance
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (response.error || 'Failed to update balance'));
+            }
+        },
+        error: function() {
+            alert('Failed to update balance. Please try again.');
+        }
+    });
+}
+
+function showBulkUpdateModal() {
+    document.getElementById('bulkUpdateModal').style.display = 'block';
+}
+
+function closeBulkUpdateModal() {
+    document.getElementById('bulkUpdateModal').style.display = 'none';
+}
+
+$(document).ready(function() {
+    $('#bulkUpdateForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serializeArray();
+        const updates = [];
+        
+        formData.forEach(function(item) {
+            if (item.value !== '') {
+                const branchId = item.name.match(/\[(\d+)\]/)[1];
+                updates.push({
+                    branch_id: branchId,
+                    balance: item.value
+                });
+            }
+        });
+        
+        if (updates.length === 0) {
+            alert('No changes to save.');
+            return;
+        }
+        
+        $.ajax({
+            url: SITE_URL + '/api/bulk_update_balances.php',
+            method: 'POST',
+            data: JSON.stringify(updates),
+            contentType: 'application/json',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('Updated ' + response.updated + ' branch(es) successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (response.error || 'Failed to update balances'));
+                }
+            },
+            error: function() {
+                alert('Failed to update balances. Please try again.');
+            }
+        });
+    });
+
+    $('#createBranchForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serialize();
+        const $submitBtn = $(this).find('button[type="submit"]');
+        const originalText = $submitBtn.text();
+        
+        $submitBtn.text('Creating...').prop('disabled', true);
+        
+        $.ajax({
+            url: SITE_URL + '/api/create_branch.php',
+            method: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('✓ Branch created successfully!');
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (response.error || 'Failed to create branch'));
+                    $submitBtn.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('✗ Error creating branch. Please try again.');
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        });
+    });
+
+    $('#editBranchForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serialize();
+        const $submitBtn = $(this).find('button[type="submit"]');
+        const originalText = $submitBtn.text();
+        
+        $submitBtn.text('Updating...').prop('disabled', true);
+        
+        $.ajax({
+            url: SITE_URL + '/api/update_branch.php',
+            method: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('✓ Branch updated successfully!');
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (response.error || 'Failed to update branch'));
+                    $submitBtn.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('✗ Error updating branch. Please try again.');
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        });
+    });
+
+    $('#assignAgentForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = $(this).serialize();
+        const $submitBtn = $(this).find('button[type="submit"]');
+        const originalText = $submitBtn.text();
+        
+        $submitBtn.text('Assigning...').prop('disabled', true);
+        
+        $.ajax({
+            url: SITE_URL + '/api/assign_agent_to_branch.php',
+            method: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('✓ Agent assigned successfully!');
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (response.error || 'Failed to assign agent'));
+                    $submitBtn.text(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('✗ Error assigning agent. Please try again.');
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        });
+    });
+});
+
+function showEditBranchModal(branchId, branchCode, balance, siteId, agentId) {
+    document.getElementById('edit_branch_id').value = branchId;
+    document.getElementById('edit_branch_code').value = branchCode;
+    document.getElementById('edit_balance').value = balance;
+    document.getElementById('edit_site_id').value = siteId;
+    document.getElementById('edit_agent_id').value = agentId || '';
+    
+    document.getElementById('editBranchModal').style.display = 'block';
+    document.getElementById('edit_branch_code').focus();
+}
+
+function closeEditBranchModal() {
+    document.getElementById('editBranchModal').style.display = 'none';
+    document.getElementById('editBranchForm').reset();
+}
+
+function showAssignAgentModal(branchId, branchCode) {
+    document.getElementById('assign_branch_id').value = branchId;
+    document.getElementById('assign_branch_code').value = branchCode;
+    document.getElementById('assign_branch_display').value = branchCode;
+    document.getElementById('assign_agent_id').value = '';
+    
+    document.getElementById('assignAgentModal').style.display = 'block';
+    document.getElementById('assign_agent_id').focus();
+}
+
+function closeAssignAgentModal() {
+    document.getElementById('assignAgentModal').style.display = 'none';
+    document.getElementById('assignAgentForm').reset();
+}
+
+function unassignAgent(branchId, branchCode) {
+    if (!confirm('Are you sure you want to unassign the agent from branch ' + branchCode + '?')) {
+        return;
+    }
+    
+    $.ajax({
+        url: SITE_URL + '/api/unassign_agent_from_branch.php',
+        method: 'POST',
+        data: {
+            branch_id: branchId
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Agent unassigned successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to unassign agent'));
+            }
+        },
+        error: function() {
+            alert('✗ Error unassigning agent. Please try again.');
+        }
+    });
+}
+
+window.onclick = function(event) {
+    const branchModal = document.getElementById('createBranchModal');
+    if (event.target == branchModal) {
+        closeCreateBranchModal();
+    }
+    const bulkModal = document.getElementById('bulkUpdateModal');
+    if (event.target == bulkModal) {
+        closeBulkUpdateModal();
+    }
+    const editModal = document.getElementById('editBranchModal');
+    if (event.target == editModal) {
+        closeEditBranchModal();
+    }
+    const assignModal = document.getElementById('assignAgentModal');
+    if (event.target == assignModal) {
+        closeAssignAgentModal();
+    }
+}
+</script>
 
 <?php include '../includes/footer.php'; ?>

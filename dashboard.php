@@ -3,27 +3,58 @@ require_once 'config/config.php';
 require_once 'config/database.php';
 requireLogin();
 
-$stmt = $pdo->query("SELECT COUNT(*) as count FROM sites");
-$totalSites = $stmt->fetch()['count'];
+if (!hasModuleAccess('dashboard')) {
+    redirect(SITE_URL . '/login.php');
+}
 
-$stmt = $pdo->query("SELECT COUNT(*) as count FROM branches");
-$totalBranches = $stmt->fetch()['count'];
+$accessible_site_ids = getAccessibleSiteIds();
+$accessible_branch_ids = getAccessibleBranchIds();
 
-$stmt = $pdo->query("SELECT COUNT(*) as count FROM agents");
-$totalAgents = $stmt->fetch()['count'];
+if (empty($accessible_site_ids)) {
+    $totalSites = 0;
+} else {
+    $placeholders = implode(',', array_fill(0, count($accessible_site_ids), '?'));
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM sites WHERE id IN ($placeholders)");
+    $stmt->execute($accessible_site_ids);
+    $totalSites = $stmt->fetch()['count'];
+}
 
-$stmt = $pdo->query("SELECT SUM(balance) as total FROM branches");
-$totalBalance = $stmt->fetch()['total'] ?? 0;
+if (empty($accessible_branch_ids)) {
+    $totalBranches = 0;
+    $totalAgents = 0;
+    $totalBalance = 0;
+} else {
+    $placeholders = implode(',', array_fill(0, count($accessible_branch_ids), '?'));
+    
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM branches WHERE id IN ($placeholders)");
+    $stmt->execute($accessible_branch_ids);
+    $totalBranches = $stmt->fetch()['count'];
+    
+    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT agent_id) as count FROM branches WHERE id IN ($placeholders) AND agent_id IS NOT NULL");
+    $stmt->execute($accessible_branch_ids);
+    $totalAgents = $stmt->fetch()['count'];
+    
+    $stmt = $pdo->prepare("SELECT SUM(balance) as total FROM branches WHERE id IN ($placeholders)");
+    $stmt->execute($accessible_branch_ids);
+    $totalBalance = $stmt->fetch()['total'] ?? 0;
+}
 
-$stmt = $pdo->query("
-    SELECT s.name as site_name, COUNT(b.id) as branch_count, SUM(b.balance) as total_balance
-    FROM sites s
-    LEFT JOIN branches b ON s.id = b.site_id
-    GROUP BY s.id
-    ORDER BY total_balance DESC
-    LIMIT 5
-");
-$topSites = $stmt->fetchAll();
+if (empty($accessible_site_ids)) {
+    $topSites = [];
+} else {
+    $placeholders = implode(',', array_fill(0, count($accessible_site_ids), '?'));
+    $stmt = $pdo->prepare("
+        SELECT s.name as site_name, COUNT(b.id) as branch_count, SUM(b.balance) as total_balance
+        FROM sites s
+        LEFT JOIN branches b ON s.id = b.site_id
+        WHERE s.id IN ($placeholders)
+        GROUP BY s.id
+        ORDER BY total_balance DESC
+        LIMIT 5
+    ");
+    $stmt->execute($accessible_site_ids);
+    $topSites = $stmt->fetchAll();
+}
 
 include 'includes/header.php';
 ?>
@@ -97,7 +128,7 @@ include 'includes/header.php';
                             <tr>
                                 <td><?php echo htmlspecialchars($site['site_name']); ?></td>
                                 <td><?php echo $site['branch_count']; ?></td>
-                                <td class="<?php echo $site['total_balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                                <td class="<?php echo $site['total_balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                     <?php echo formatCurrency($site['total_balance']); ?>
                                 </td>
                             </tr>

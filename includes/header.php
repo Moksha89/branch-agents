@@ -1,36 +1,112 @@
+<?php
+$stmt = $pdo->query("SELECT * FROM portal_settings WHERE id = 1");
+$portalSettings = $stmt->fetch();
+$portalName = $portalSettings ? $portalSettings['portal_name'] : 'Hisaab Portal';
+$logoPath = ($portalSettings && $portalSettings['logo_path']) ? SITE_URL . '/' . $portalSettings['logo_path'] : null;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo SITE_NAME; ?></title>
-    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css">
+    <title><?php echo htmlspecialchars($portalName); ?></title>
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+    // Auto-sync WhatsApp token from localStorage to PHP session on every page load
+    (function() {
+        const whatsappToken = localStorage.getItem('whatsapp_session_token');
+        if (whatsappToken) {
+            // Sync token to PHP session immediately on page load
+            $.ajax({
+                url: '<?php echo SITE_URL; ?>/api/save_whatsapp_token.php',
+                method: 'POST',
+                data: { session_token: whatsappToken },
+                async: false,
+                error: function() {
+                    console.error('Failed to sync WhatsApp token to session');
+                }
+            });
+        }
+    })();
+    </script>
 </head>
 <body>
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>Hisaab</h2>
+            <?php if ($logoPath): ?>
+                <img src="<?php echo $logoPath; ?>" alt="Logo" style="max-width: 100%; max-height: 40px; margin-bottom: 10px;">
+            <?php endif; ?>
+            <h2><?php echo htmlspecialchars($portalName); ?></h2>
         </div>
         <nav class="sidebar-nav">
+            <?php if (hasModuleAccess('dashboard')): ?>
             <a href="<?php echo SITE_URL; ?>/dashboard.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>">
                 <i class="icon-dashboard"></i> Dashboard
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('sites')): ?>
             <a href="<?php echo SITE_URL; ?>/sites/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/sites/') !== false ? 'active' : ''; ?>">
                 <i class="icon-site"></i> Sites
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('branches')): ?>
             <a href="<?php echo SITE_URL; ?>/branches/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/branches/') !== false ? 'active' : ''; ?>">
                 <i class="icon-branch"></i> Branches
             </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('agents')): ?>
             <a href="<?php echo SITE_URL; ?>/agents/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/agents/') !== false ? 'active' : ''; ?>">
                 <i class="icon-agent"></i> Agents
             </a>
-            <a href="<?php echo SITE_URL; ?>/reports/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/') !== false ? 'active' : ''; ?>">
+            <?php endif; ?>
+            
+            <?php if (isAdmin() || hasModuleAccess('transactions')): ?>
+            <a href="<?php echo SITE_URL; ?>/transactions/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/transactions/') !== false ? 'active' : ''; ?>">
+                <i class="icon-transaction"></i> Transactions
+            </a>
+            <?php endif; ?>
+            
+            <?php if (isAdmin()): ?>
+            <a href="<?php echo SITE_URL; ?>/backups/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/backups/') !== false ? 'active' : ''; ?>">
+                <i class="icon">📦</i> Backups
+            </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('masters')): ?>
+            <a href="<?php echo SITE_URL; ?>/masters/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/masters/') !== false ? 'active' : ''; ?>">
+                <i class="icon-agent"></i> Masters
+            </a>
+            <?php endif; ?>
+            
+            <?php if (hasModuleAccess('reports')): ?>
+            <a href="<?php echo SITE_URL; ?>/reports/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/index.php') !== false ? 'active' : ''; ?>">
                 <i class="icon-report"></i> Reports
             </a>
-            <a href="<?php echo SITE_URL; ?>/settings/whatsapp.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/') !== false ? 'active' : ''; ?>">
-                <i class="icon-settings"></i> WhatsApp Settings
+            <a href="<?php echo SITE_URL; ?>/reports/message_log.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/reports/message_log.php') !== false ? 'active' : ''; ?>">
+                <i class="icon-report"></i> Message Log
             </a>
+            <?php endif; ?>
+            
+            <?php if (isAdmin()): ?>
+            <a href="<?php echo SITE_URL; ?>/employees/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/employees/') !== false ? 'active' : ''; ?>">
+                <i class="icon-agent"></i> Employees
+            </a>
+            <a href="<?php echo SITE_URL; ?>/settings/whatsapp_web.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/whatsapp_web.php') !== false ? 'active' : ''; ?>">
+                <i class="icon-settings"></i> WhatsApp Connection
+            </a>
+            <a href="<?php echo SITE_URL; ?>/settings/index.php" class="nav-item <?php echo strpos($_SERVER['PHP_SELF'], '/settings/index.php') !== false ? 'active' : ''; ?>">
+                <i class="icon-settings"></i> Portal Settings
+            </a>
+            <?php endif; ?>
+            
             <a href="<?php echo SITE_URL; ?>/logout.php" class="nav-item">
                 <i class="icon-logout"></i> Logout
             </a>
@@ -44,7 +120,9 @@
             </div>
             <div class="topbar-right">
                 <span class="user-info">
-                    <i class="icon-user"></i> <?php echo $_SESSION['admin_mobile']; ?>
+                    <i class="icon-user"></i> 
+                    <?php echo isAdmin() ? $_SESSION['admin_mobile'] : $_SESSION['employee_name']; ?>
+                    <?php if (isEmployee()): ?> <small>(Employee)</small><?php endif; ?>
                 </span>
             </div>
         </div>

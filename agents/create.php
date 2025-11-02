@@ -3,6 +3,14 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
+if (!hasModuleAccess('agents')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+if (!hasFullAccess('agents')) {
+    redirect(SITE_URL . '/agents/index.php');
+}
+
 $error = '';
 $success = '';
 

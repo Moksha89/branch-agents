@@ -1,0 +1,25 @@
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_code VARCHAR(50) UNIQUE NOT NULL,
+    sender_id INT NOT NULL,
+    receiver_id INT NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    sender_opening_balance DECIMAL(15,2) NOT NULL,
+    sender_closing_balance DECIMAL(15,2) NOT NULL,
+    receiver_opening_balance DECIMAL(15,2) NOT NULL,
+    receiver_closing_balance DECIMAL(15,2) NOT NULL,
+    remarks TEXT,
+    transaction_date DATETIME NOT NULL,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    INDEX idx_sender (sender_id),
+    INDEX idx_receiver (receiver_id),
+    INDEX idx_transaction_date (transaction_date),
+    INDEX idx_deleted_at (deleted_at),
+    FOREIGN KEY (sender_id) REFERENCES agents(id) ON DELETE RESTRICT,
+    FOREIGN KEY (receiver_id) REFERENCES agents(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES admins(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

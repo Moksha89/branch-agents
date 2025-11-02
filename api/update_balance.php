@@ -1,13 +1,14 @@
 <?php
 require_once '../config/config.php';
 require_once '../config/database.php';
+requireLogin();
 
-header('Content-Type: application/json');
-
-if (!isLoggedIn()) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+if (!hasFullAccess('branches')) {
+    echo json_encode(['success' => false, 'error' => 'You do not have permission to edit balances']);
     exit;
 }
+
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);
@@ -16,6 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $branchId = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
 $balance = isset($_POST['balance']) ? floatval($_POST['balance']) : 0;
+
+if (!canAccessBranch($branchId)) {
+    echo json_encode(['success' => false, 'error' => 'You do not have access to this branch']);
+    exit;
+}
 
 if ($branchId <= 0) {
     echo json_encode(['success' => false, 'error' => 'Invalid branch ID']);

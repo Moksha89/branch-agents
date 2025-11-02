@@ -1,5 +1,63 @@
     </div>
     
     <script src="<?php echo SITE_URL; ?>/assets/js/main.js"></script>
+    <script src="<?php echo SITE_URL; ?>/assets/js/whatsapp.js"></script>
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable) {
+        try {
+            $('.data-table').each(function() {
+                const $table = $(this);
+                const $rows = $table.find('tbody tr');
+                
+                if ($rows.length === 0) {
+                    return;
+                }
+                
+                if ($rows.length === 1 && $rows.first().find('td[colspan]').length > 0) {
+                    return;
+                }
+                
+                $table.DataTable({
+                    "pageLength": 25,
+                    "order": [],
+                    "language": {
+                        "search": "Search:",
+                        "lengthMenu": "Show _MENU_ entries",
+                        "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                        "infoEmpty": "Showing 0 to 0 of 0 entries",
+                        "infoFiltered": "(filtered from _TOTAL_ total entries)",
+                        "zeroRecords": "No matching records found",
+                        "emptyTable": "No data available in table"
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('DataTables initialization error:', error);
+        }
+    }
+    
+    const whatsappToken = localStorage.getItem('whatsapp_session_token');
+    
+    if (whatsappToken && whatsappToken.trim() !== '') {
+        $.ajax({
+            url: '<?php echo SITE_URL; ?>/api/save_whatsapp_token.php',
+            method: 'POST',
+            data: { session_token: whatsappToken },
+            dataType: 'json',
+            success: function(response) {
+                console.log('WhatsApp token synced to session');
+            },
+            error: function(xhr, status, error) {
+                console.error('Failed to sync WhatsApp token:', error);
+            }
+        });
+    }
+});
+</script>
 </body>
 </html>

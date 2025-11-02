@@ -3,19 +3,32 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 requireLogin();
 
-$stmt = $pdo->query("
-    SELECT 
-        s.*,
-        COUNT(DISTINCT b.id) as branch_count,
-        COUNT(DISTINCT ab.agent_id) as agent_count,
-        COALESCE(SUM(b.balance), 0) as total_balance
-    FROM sites s
-    LEFT JOIN branches b ON s.id = b.site_id
-    LEFT JOIN agent_branches ab ON b.id = ab.branch_id
-    GROUP BY s.id
-    ORDER BY s.name
-");
-$sites = $stmt->fetchAll();
+if (!hasModuleAccess('sites')) {
+    redirect(SITE_URL . '/dashboard.php');
+}
+
+$accessible_site_ids = getAccessibleSiteIds();
+if (empty($accessible_site_ids)) {
+    $sites = [];
+} else {
+    $placeholders = implode(',', array_fill(0, count($accessible_site_ids), '?'));
+    $stmt = $pdo->prepare("
+        SELECT 
+            s.*,
+            COUNT(DISTINCT b.id) as branch_count,
+            COUNT(DISTINCT b.agent_id) as agent_count,
+            COALESCE(SUM(b.balance), 0) as total_balance
+        FROM sites s
+        LEFT JOIN branches b ON s.id = b.site_id
+        WHERE s.id IN ($placeholders)
+        GROUP BY s.id
+        ORDER BY s.name
+    ");
+    $stmt->execute($accessible_site_ids);
+    $sites = $stmt->fetchAll();
+}
+
+$has_full_access = hasFullAccess('sites');
 
 include '../includes/header.php';
 ?>
@@ -23,11 +36,13 @@ include '../includes/header.php';
 <div class="content-wrapper">
     <div class="page-header">
         <h1>Sites Management</h1>
-        <a href="create.php" class="btn btn-primary">+ Create New Site</a>
+        <?php if ($has_full_access): ?>
+        <button onclick="showCreateSiteModal()" class="btn btn-primary">+ Create New Site</button>
+        <?php endif; ?>
     </div>
     
     <div class="table-responsive">
-        <table class="table" id="sitesTable">
+        <table class="table data-table" id="sitesTable">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -42,7 +57,7 @@ include '../includes/header.php';
             <tbody>
                 <?php if (empty($sites)): ?>
                     <tr>
-                        <td colspan="7" class="text-center">No sites found. <a href="create.php">Create your first site</a></td>
+                        <td colspan="7" class="text-center">No sites found. <a href="javascript:void(0)" onclick="showCreateSiteModal()">Create your first site</a></td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($sites as $site): ?>
@@ -51,15 +66,12 @@ include '../includes/header.php';
                             <td><strong><?php echo htmlspecialchars($site['name']); ?></strong></td>
                             <td><?php echo $site['branch_count']; ?></td>
                             <td><?php echo $site['agent_count']; ?></td>
-                            <td class="<?php echo $site['total_balance'] < 0 ? 'text-danger' : 'text-success'; ?>">
+                            <td class="<?php echo $site['total_balance'] < 0 ? 'text-success' : 'text-danger'; ?>">
                                 <?php echo formatCurrency($site['total_balance']); ?>
                             </td>
                             <td><?php echo date('d-M-Y', strtotime($site['created_at'])); ?></td>
                             <td>
                                 <a href="view.php?id=<?php echo $site['id']; ?>" class="btn btn-sm btn-info">View</a>
-                                <a href="edit.php?id=<?php echo $site['id']; ?>" class="btn btn-sm btn-warning">Edit</a>
-                                <a href="delete.php?id=<?php echo $site['id']; ?>" class="btn btn-sm btn-danger" 
-                                   onclick="return confirm('Are you sure you want to delete this site? All branches will also be deleted.')">Delete</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -68,5 +80,106 @@ include '../includes/header.php';
         </table>
     </div>
 </div>
+
+<div id="createSiteModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Site</h2>
+            <span class="modal-close" onclick="closeCreateSiteModal()">&times;</span>
+        </div>
+        <form id="createSiteForm">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="site_name">Site Name *</label>
+                    <input type="text" id="site_name" name="name" required 
+                           placeholder="e.g., JAI, KALKI, VVBOOK">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateSiteModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Site</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const SITE_URL = '<?php echo SITE_URL; ?>';
+
+function showCreateSiteModal() {
+    document.getElementById('createSiteModal').style.display = 'block';
+    document.getElementById('site_name').focus();
+}
+
+function closeCreateSiteModal() {
+    document.getElementById('createSiteModal').style.display = 'none';
+    document.getElementById('createSiteForm').reset();
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('createSiteModal');
+    if (event.target == modal) {
+        closeCreateSiteModal();
+    }
+}
+
+$('#createSiteForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    const $submitBtn = $(this).find('button[type="submit"]');
+    const originalText = $submitBtn.text();
+    
+    $submitBtn.text('Creating...').prop('disabled', true);
+    
+    $.ajax({
+        url: SITE_URL + '/api/create_site.php',
+        method: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                alert('✓ Site created successfully!');
+                location.reload();
+            } else {
+                alert('✗ Error: ' + (response.error || 'Failed to create site'));
+                $submitBtn.text(originalText).prop('disabled', false);
+            }
+        },
+        error: function() {
+            alert('✗ Error creating site. Please try again.');
+            $submitBtn.text(originalText).prop('disabled', false);
+        }
+    });
+});
+</script>
+
+<script>
+function toggleSiteStatus(siteId, newStatus) {
+    const action = newStatus ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} this site?`)) {
+        return;
+    }
+    
+    fetch('<?php echo SITE_URL; ?>/api/toggle_site_status.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `site_id=${siteId}&status=${newStatus}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+    });
+}
+</script>
 
 <?php include '../includes/footer.php'; ?>
