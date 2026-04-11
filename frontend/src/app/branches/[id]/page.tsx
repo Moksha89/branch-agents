@@ -26,6 +26,7 @@ import {
   ArrowLeftRight,
   Send,
   ListFilter,
+  RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -134,6 +135,10 @@ export default function BranchDetailPage() {
   // Branch-level transactions
   const [branchTransactions, setBranchTransactions] = useState<Transaction[]>([]);
   const [branchTxLoading, setBranchTxLoading] = useState(false);
+
+  // Status change dropdown
+  const [statusDropdownAccountId, setStatusDropdownAccountId] = useState<string | null>(null);
+  const [statusChanging, setStatusChanging] = useState(false);
 
   // For transfer: all branches + accounts
   const [allBranches, setAllBranches] = useState<AllBranch[]>([]);
@@ -440,6 +445,30 @@ export default function BranchDetailPage() {
       case 'TRANSFER': return 'T';
       case 'OUT_TRANSFER': return 'OT';
       default: return '?';
+    }
+  };
+
+  const handleStatusChange = async (account: BankAccount, newStatus: AccountStatus) => {
+    const token = getToken();
+    if (!token) return;
+    setStatusChanging(true);
+    try {
+      const res = await fetch(`${apiUrl}/bank-accounts/${account.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        await fetchBranch();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setStatusChanging(false);
+      setStatusDropdownAccountId(null);
     }
   };
 
@@ -755,6 +784,59 @@ export default function BranchDetailPage() {
                             <Send className="h-4 w-4" />
                             OT
                           </button>
+
+                          {/* Status Change Dropdown */}
+                          <div className="relative ml-auto">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStatusDropdownAccountId(
+                                  statusDropdownAccountId === account.id ? null : account.id
+                                );
+                              }}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-colors text-sm font-medium ${
+                                STATUS_CONFIG[account.status].bg
+                              } ${STATUS_CONFIG[account.status].border} ${STATUS_CONFIG[account.status].color} hover:opacity-80`}
+                              title="Change Status"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              {STATUS_CONFIG[account.status].label}
+                            </button>
+                            {statusDropdownAccountId === account.id && (
+                              <div
+                                className="absolute right-0 bottom-full mb-1 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-30 overflow-hidden"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {(Object.keys(STATUS_CONFIG) as AccountStatus[]).map((s) => {
+                                  const cfg = STATUS_CONFIG[s];
+                                  const isActive = s === account.status;
+                                  return (
+                                    <button
+                                      key={s}
+                                      disabled={isActive || statusChanging}
+                                      onClick={() => handleStatusChange(account, s)}
+                                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
+                                        isActive
+                                          ? 'bg-slate-700/50 cursor-default'
+                                          : 'hover:bg-slate-700/50 cursor-pointer'
+                                      }`}
+                                    >
+                                      <span className={`w-2 h-2 rounded-full ${
+                                        s === 'ACTIVE' ? 'bg-green-400' :
+                                        s === 'DEBIT_FREEZE' ? 'bg-yellow-400' :
+                                        s === 'CREDIT_FREEZE' ? 'bg-orange-400' :
+                                        s === 'CYBER' ? 'bg-red-400' : 'bg-slate-400'
+                                      }`} />
+                                      <span className={isActive ? cfg.color + ' font-medium' : 'text-slate-300'}>
+                                        {cfg.label}
+                                      </span>
+                                      {isActive && <span className="ml-auto text-xs text-slate-500">current</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
