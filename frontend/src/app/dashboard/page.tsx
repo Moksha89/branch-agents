@@ -1,86 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { LogOut, LayoutDashboard } from 'lucide-react';
-
-interface UserData {
-  id: string;
-  username: string;
-  fullName: string;
-  role: string;
-  avatar: string | null;
-}
+import Sidebar from '@/components/layout/sidebar';
+import { LayoutDashboard } from 'lucide-react';
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<UserData | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const userData = localStorage.getItem('user');
-
-    if (!token || !userData) {
-      router.push('/login');
-      return;
-    }
-
-    try {
-      setUser(JSON.parse(userData));
-    } catch {
-      router.push('/login');
-    }
-  }, [router]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
-    router.push('/login');
-  };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Top bar */}
-      <header className="bg-slate-800/80 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600" />
-              <h1 className="text-lg font-semibold text-white">Systematic Web</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-white">{user.fullName}</p>
-                <p className="text-xs text-slate-400 capitalize">{user.role.toLowerCase().replace('_', ' ')}</p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                {user.fullName.charAt(0).toUpperCase()}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                className="text-slate-400 hover:text-white hover:bg-slate-700"
-                title="Logout"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <Sidebar>
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <LayoutDashboard className="h-6 w-6 text-blue-400" />
           <h2 className="text-2xl font-bold text-white">Dashboard</h2>
@@ -89,7 +15,7 @@ export default function DashboardPage() {
         {/* Welcome card */}
         <div className="rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-slate-700/50 p-6 sm:p-8">
           <h3 className="text-xl font-semibold text-white mb-2">
-            Welcome back, {user.fullName}!
+            Welcome to Systematic Web!
           </h3>
           <p className="text-slate-400">
             Your dashboard is being set up. New features and modules will appear here as they are built.
@@ -116,7 +42,7 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
-      </main>
-    </div>
+      </div>
+    </Sidebar>
   );
 }

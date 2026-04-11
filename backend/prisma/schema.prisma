@@ -22,18 +22,64 @@ enum UserStatus {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  username  String     @unique
-  password  String
-  fullName  String     @map("full_name")
-  email     String?    @unique
-  phone     String?
-  role      UserRole   @default(EMPLOYEE)
-  status    UserStatus @default(ACTIVE)
-  avatar    String?
-  lastLogin DateTime?  @map("last_login")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  id           String        @id @default(uuid())
+  username     String        @unique
+  password     String
+  fullName     String        @map("full_name")
+  email        String?       @unique
+  phone        String?
+  role         UserRole      @default(EMPLOYEE)
+  status       UserStatus    @default(ACTIVE)
+  avatar       String?
+  lastLogin    DateTime?     @map("last_login")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  bankAccounts BankAccount[]
 
   @@map("users")
+}
+
+model Branch {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  code         String        @unique
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  bankAccounts BankAccount[]
+
+  @@map("branches")
+}
+
+model BankAccount {
+  id                  String   @id @default(uuid())
+  fullName            String   @map("full_name")
+  mobileNumber        String   @map("mobile_number")
+  aadharLinkedNumber  String   @map("aadhar_linked_number")
+  bankName            String   @map("bank_name")
+  accountNumber       String   @map("account_number")
+  ifscCode            String   @map("ifsc_code")
+  bankBranch          String   @map("bank_branch")
+  aadharNumber        String   @map("aadhar_number")
+  aadharPhoto         String?  @map("aadhar_photo")
+  panCardNumber       String   @map("pan_card_number")
+  panCardPhoto        String?  @map("pan_card_photo")
+  debitCardNumber     String   @map("debit_card_number")
+  debitCardExpiry     String   @map("debit_card_expiry")
+  debitCardCvv        String   @map("debit_card_cvv")
+  netbankingUsername  String   @map("netbanking_username")
+  netbankingPassword  String   @map("netbanking_password")
+  bankBalance         Float    @default(0) @map("bank_balance")
+  branchId            String   @map("branch_id")
+  branch              Branch   @relation(fields: [branchId], references: [id])
+  createdById         String   @map("created_by_id")
+  createdBy           User     @relation(fields: [createdById], references: [id])
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("bank_accounts")
 }
