@@ -16,7 +16,6 @@ import {
   Landmark,
   IndianRupee,
   X,
-  Eye,
   Pencil,
   Trash2,
   Shield,
