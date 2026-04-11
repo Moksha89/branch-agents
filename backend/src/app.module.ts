@@ -9,11 +9,13 @@ import { BranchesModule } from './branches/branches.module';
 import { BankAccountsModule } from './bank-accounts/bank-accounts.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { DailyReportsModule } from './daily-reports/daily-reports.module';
+import { AuditModule } from './audit/audit.module';
 import { RolesGuard } from './auth/roles.guard';
 
 @Module({
   imports: [
     PrismaModule,
+    AuditModule,
     AuthModule,
     UsersModule,
     BranchesModule,

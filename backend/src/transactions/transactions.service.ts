@@ -4,11 +4,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   // FIX #2: Enforce account status on transactions
   private validateAccountStatus(account: { status: string; fullName: string }, action: 'debit' | 'credit') {
@@ -31,7 +35,7 @@ export class TransactionsService {
   async create(dto: CreateTransactionDto, userId: string) {
     const amount = dto.amount;
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Lock the source account row with findFirst + select for update behavior
       const fromAccount = await tx.bankAccount.findUnique({
         where: { id: dto.fromAccountId },
@@ -253,6 +257,15 @@ export class TransactionsService {
           throw new BadRequestException('Invalid transaction type');
       }
     }, { isolationLevel: 'Serializable' });
+
+    // FIX #18: Audit log for transactions
+    this.audit.logTransaction(dto.type, userId, result.id, {
+      amount,
+      fromAccountId: dto.fromAccountId,
+      toAccountId: dto.toAccountId || null,
+    });
+
+    return result;
   }
 
   async findByAccount(accountId: string) {
