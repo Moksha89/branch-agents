@@ -268,7 +268,7 @@ export class TransactionsService {
     return result;
   }
 
-  async findByAccount(accountId: string) {
+  async findByAccount(accountId: string, page = 1, limit = 100) {
     const account = await this.prisma.bankAccount.findUnique({
       where: { id: accountId },
     });
@@ -276,48 +276,62 @@ export class TransactionsService {
       throw new NotFoundException('Account not found');
     }
 
-    return this.prisma.transaction.findMany({
-      where: {
-        OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
-      },
-      include: {
-        fromAccount: {
-          select: { id: true, fullName: true, accountNumber: true, bankName: true },
+    const where = {
+      OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where,
+        include: {
+          fromAccount: {
+            select: { id: true, fullName: true, accountNumber: true, bankName: true },
+          },
+          toAccount: {
+            select: { id: true, fullName: true, accountNumber: true, bankName: true },
+          },
+          createdBy: { select: { id: true, fullName: true, username: true } },
         },
-        toAccount: {
-          select: { id: true, fullName: true, accountNumber: true, bankName: true },
-        },
-        createdBy: { select: { id: true, fullName: true, username: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.transaction.count({ where }),
+    ]);
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  async findByBranch(branchId: string) {
+  async findByBranch(branchId: string, page = 1, limit = 100) {
     const accounts = await this.prisma.bankAccount.findMany({
       where: { branchId },
       select: { id: true },
     });
     const accountIds = accounts.map((a) => a.id);
 
-    return this.prisma.transaction.findMany({
-      where: {
-        OR: [
-          { fromAccountId: { in: accountIds } },
-          { toAccountId: { in: accountIds } },
-        ],
-      },
-      include: {
-        fromAccount: {
-          select: { id: true, fullName: true, accountNumber: true, bankName: true },
+    const where = {
+      OR: [
+        { fromAccountId: { in: accountIds } },
+        { toAccountId: { in: accountIds } },
+      ],
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where,
+        include: {
+          fromAccount: {
+            select: { id: true, fullName: true, accountNumber: true, bankName: true },
+          },
+          toAccount: {
+            select: { id: true, fullName: true, accountNumber: true, bankName: true },
+          },
+          createdBy: { select: { id: true, fullName: true, username: true } },
         },
-        toAccount: {
-          select: { id: true, fullName: true, accountNumber: true, bankName: true },
-        },
-        createdBy: { select: { id: true, fullName: true, username: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.transaction.count({ where }),
+    ]);
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findAll() {

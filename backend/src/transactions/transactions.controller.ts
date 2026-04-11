@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -25,13 +26,29 @@ export class TransactionsController {
   }
 
   @Get('branch/:branchId')
-  async findByBranch(@Param('branchId') branchId: string) {
-    return this.transactionsService.findByBranch(branchId);
+  async findByBranch(
+    @Param('branchId') branchId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.transactionsService.findByBranch(
+      branchId,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 100,
+    );
   }
 
   @Get('account/:accountId')
-  async findByAccount(@Param('accountId') accountId: string) {
-    return this.transactionsService.findByAccount(accountId);
+  async findByAccount(
+    @Param('accountId') accountId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.transactionsService.findByAccount(
+      accountId,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 100,
+    );
   }
 
   @Get()

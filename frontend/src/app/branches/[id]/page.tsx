@@ -235,8 +235,8 @@ export default function BranchDetailPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
-        setTransactions(data);
+        const json = await res.json();
+        setTransactions(json.data || json);
       }
     } catch {
       showToast('Failed to load transactions', 'error');
@@ -254,8 +254,8 @@ export default function BranchDetailPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
-        setBranchTransactions(data);
+        const json = await res.json();
+        setBranchTransactions(json.data || json);
       }
     } catch {
       showToast('Failed to load branch transactions', 'error');
