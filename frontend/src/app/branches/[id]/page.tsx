@@ -27,6 +27,10 @@ import {
   ListFilter,
   RefreshCw,
   Download,
+  FileText,
+  CalendarDays,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -90,7 +94,18 @@ interface AllBranch {
 }
 
 type TxType = 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER';
-type TabType = 'accounts' | 'transactions';
+type TabType = 'accounts' | 'transactions' | 'daily-report';
+
+interface DailyReport {
+  id: string;
+  date: string;
+  totalDeposit: number;
+  totalWithdrawal: number;
+  playerBalance: number;
+  profitLoss: number;
+  createdBy: { id: string; fullName: string; username: string };
+  createdAt: string;
+}
 
 const STATUS_CONFIG: Record<AccountStatus, { label: string; color: string; bg: string; border: string }> = {
   ACTIVE: { label: 'Active', color: 'text-green-400', bg: 'bg-green-500/15', border: 'border-green-500/30' },
@@ -145,6 +160,19 @@ export default function BranchDetailPage() {
   const [branchTxDateTo, setBranchTxDateTo] = useState('');
   const [acctTxDateFrom, setAcctTxDateFrom] = useState('');
   const [acctTxDateTo, setAcctTxDateTo] = useState('');
+
+  // Daily reports
+  const [dailyReports, setDailyReports] = useState<DailyReport[]>([]);
+  const [dailyReportsLoading, setDailyReportsLoading] = useState(false);
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportDeposit, setReportDeposit] = useState('');
+  const [reportWithdrawal, setReportWithdrawal] = useState('');
+  const [reportPlayerBalance, setReportPlayerBalance] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
 
   // For transfer: all branches + accounts
   const [allBranches, setAllBranches] = useState<AllBranch[]>([]);
@@ -239,12 +267,38 @@ export default function BranchDetailPage() {
     fetchBranch();
   }, [fetchBranch]);
 
+  const fetchDailyReports = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setDailyReportsLoading(true);
+    try {
+      const res = await fetch(`${apiUrl}/daily-reports/branch/${branchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDailyReports(data);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setDailyReportsLoading(false);
+    }
+  }, [apiUrl, branchId]);
+
   // Load branch transactions when switching to transactions tab
   useEffect(() => {
     if (activeTab === 'transactions' && branchTransactions.length === 0) {
       fetchBranchTransactions();
     }
   }, [activeTab, branchTransactions.length, fetchBranchTransactions]);
+
+  // Load daily reports when switching to daily-report tab
+  useEffect(() => {
+    if (activeTab === 'daily-report' && dailyReports.length === 0) {
+      fetchDailyReports();
+    }
+  }, [activeTab, dailyReports.length, fetchDailyReports]);
 
   const maskNumber = (num: string) => {
     if (num.length <= 4) return num;
@@ -486,6 +540,85 @@ export default function BranchDetailPage() {
     link.download = filename + '.csv';
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleReportSubmit = async () => {
+    const token = getToken();
+    if (!token) return;
+    const deposit = parseFloat(reportDeposit);
+    const withdrawal = parseFloat(reportWithdrawal);
+    const playerBal = parseFloat(reportPlayerBalance);
+    if (isNaN(deposit) || isNaN(withdrawal) || isNaN(playerBal)) {
+      setReportError('Please fill all fields with valid numbers');
+      return;
+    }
+    setReportSubmitting(true);
+    setReportError('');
+    try {
+      if (editingReportId) {
+        const res = await fetch(`${apiUrl}/daily-reports/${editingReportId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ totalDeposit: deposit, totalWithdrawal: withdrawal, playerBalance: playerBal }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setReportError(err.message || 'Failed to update report');
+          return;
+        }
+      } else {
+        const res = await fetch(`${apiUrl}/daily-reports`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ date: reportDate, totalDeposit: deposit, totalWithdrawal: withdrawal, playerBalance: playerBal, branchId }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setReportError(err.message || 'Failed to create report');
+          return;
+        }
+      }
+      setShowReportForm(false);
+      setEditingReportId(null);
+      setReportDeposit('');
+      setReportWithdrawal('');
+      setReportPlayerBalance('');
+      setReportError('');
+      await fetchDailyReports();
+    } catch {
+      setReportError('Failed to save report');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  const handleEditReport = (report: DailyReport) => {
+    setEditingReportId(report.id);
+    setReportDate(report.date.split('T')[0]);
+    setReportDeposit(String(report.totalDeposit));
+    setReportWithdrawal(String(report.totalWithdrawal));
+    setReportPlayerBalance(String(report.playerBalance));
+    setReportError('');
+    setShowReportForm(true);
+  };
+
+  const handleDeleteReport = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+    setDeletingReportId(id);
+    try {
+      const res = await fetch(`${apiUrl}/daily-reports/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        await fetchDailyReports();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setDeletingReportId(null);
+    }
   };
 
   const handleStatusChange = async (account: BankAccount, newStatus: AccountStatus) => {
@@ -739,6 +872,17 @@ export default function BranchDetailPage() {
                 <ListFilter className="h-4 w-4 inline mr-1.5 -mt-0.5" />
                 Transactions
               </button>
+              <button
+                onClick={() => setActiveTab('daily-report')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'daily-report'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <FileText className="h-4 w-4 inline mr-1.5 -mt-0.5" />
+                Daily Report
+              </button>
             </div>
 
             {/* ===== ACCOUNTS TAB ===== */}
@@ -947,6 +1091,206 @@ export default function BranchDetailPage() {
                       <TransactionTable txList={filteredBranchTx} />
                     )}
                   </>
+                )}
+              </div>
+            )}
+
+            {/* ===== DAILY REPORT TAB ===== */}
+            {activeTab === 'daily-report' && (
+              <div>
+                {/* Create / Edit Form */}
+                {showReportForm ? (
+                  <div className="mb-6 rounded-xl bg-slate-800/50 border border-slate-700/50 p-5">
+                    <h3 className="text-lg font-semibold text-white mb-4">
+                      {editingReportId ? 'Edit Daily Report' : 'Create Daily Report'}
+                    </h3>
+                    {reportError && (
+                      <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                        {reportError}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Date</label>
+                        <input
+                          type="date"
+                          value={reportDate}
+                          onChange={(e) => setReportDate(e.target.value)}
+                          disabled={!!editingReportId}
+                          className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Deposit</label>
+                        <input
+                          type="number"
+                          value={reportDeposit}
+                          onChange={(e) => setReportDeposit(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Withdrawal</label>
+                        <input
+                          type="number"
+                          value={reportWithdrawal}
+                          onChange={(e) => setReportWithdrawal(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Player Balance</label>
+                        <input
+                          type="number"
+                          value={reportPlayerBalance}
+                          onChange={(e) => setReportPlayerBalance(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    {/* Live P/L Preview */}
+                    {reportDeposit && reportWithdrawal && (
+                      <div className="mb-4 p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+                        <span className="text-xs text-slate-400 uppercase tracking-wider">P/L Preview: </span>
+                        <span className={`text-sm font-bold ${(parseFloat(reportDeposit) || 0) - (parseFloat(reportWithdrawal) || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ₹{((parseFloat(reportDeposit) || 0) - (parseFloat(reportWithdrawal) || 0)).toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-xs text-slate-500 ml-2">(Deposit - Withdrawal)</span>
+                      </div>
+                    )}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleReportSubmit}
+                        disabled={reportSubmitting}
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {reportSubmitting ? 'Saving...' : editingReportId ? 'Update Report' : 'Create Report'}
+                      </button>
+                      <button
+                        onClick={() => { setShowReportForm(false); setEditingReportId(null); setReportError(''); setReportDeposit(''); setReportWithdrawal(''); setReportPlayerBalance(''); }}
+                        className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => { setShowReportForm(true); setEditingReportId(null); setReportDate(new Date().toISOString().split('T')[0]); setReportDeposit(''); setReportWithdrawal(''); setReportPlayerBalance(''); setReportError(''); }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                      Create Daily Report
+                    </button>
+                  </div>
+                )}
+
+                {/* Reports Table */}
+                {dailyReportsLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                  </div>
+                ) : dailyReports.length === 0 ? (
+                  <div className="text-center py-20 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                    <FileText className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-300 mb-2">No daily reports yet</h3>
+                    <p className="text-slate-500">Click &quot;Create Daily Report&quot; to add your first report</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-slate-800/80 border-b border-slate-600/50">
+                            <th className="text-left px-4 py-3 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Date</th>
+                            <th className="text-right px-4 py-3 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Total Deposit</th>
+                            <th className="text-right px-4 py-3 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Total Withdrawal</th>
+                            <th className="text-right px-4 py-3 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Player Balance</th>
+                            <th className="text-right px-4 py-3 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">P/L</th>
+                            <th className="text-left px-4 py-3 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Created By</th>
+                            <th className="text-center px-4 py-3 text-slate-400 font-semibold text-xs uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dailyReports.map((report, idx) => (
+                            <tr
+                              key={report.id}
+                              className={`border-b border-slate-700/30 ${idx % 2 === 0 ? 'bg-slate-800/20' : 'bg-slate-800/40'} hover:bg-slate-700/30 transition-colors`}
+                            >
+                              <td className="px-4 py-3 text-slate-200 border-r border-slate-700/30 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <CalendarDays className="h-3.5 w-3.5 text-slate-500" />
+                                  {new Date(report.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-right text-green-400 font-medium border-r border-slate-700/30">
+                                <div className="flex items-center justify-end gap-1">
+                                  <TrendingUp className="h-3.5 w-3.5" />
+                                  ₹{report.totalDeposit.toLocaleString('en-IN')}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-right text-red-400 font-medium border-r border-slate-700/30">
+                                <div className="flex items-center justify-end gap-1">
+                                  <TrendingDown className="h-3.5 w-3.5" />
+                                  ₹{report.totalWithdrawal.toLocaleString('en-IN')}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-right text-blue-400 font-medium border-r border-slate-700/30">
+                                ₹{report.playerBalance.toLocaleString('en-IN')}
+                              </td>
+                              <td className={`px-4 py-3 text-right font-bold border-r border-slate-700/30 ${report.profitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {report.profitLoss >= 0 ? '+' : ''}₹{report.profitLoss.toLocaleString('en-IN')}
+                              </td>
+                              <td className="px-4 py-3 text-slate-400 text-xs border-r border-slate-700/30">
+                                {report.createdBy.fullName}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => handleEditReport(report)}
+                                    className="px-2 py-1 rounded text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteReport(report.id)}
+                                    disabled={deletingReportId === report.id}
+                                    className="px-2 py-1 rounded text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors disabled:opacity-50"
+                                  >
+                                    {deletingReportId === report.id ? '...' : 'Del'}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        {/* Summary row */}
+                        <tfoot>
+                          <tr className="bg-slate-800/60 border-t-2 border-slate-600/50">
+                            <td className="px-4 py-3 text-slate-300 font-bold border-r border-slate-700/30">TOTAL</td>
+                            <td className="px-4 py-3 text-right text-green-400 font-bold border-r border-slate-700/30">
+                              ₹{dailyReports.reduce((sum, r) => sum + r.totalDeposit, 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-4 py-3 text-right text-red-400 font-bold border-r border-slate-700/30">
+                              ₹{dailyReports.reduce((sum, r) => sum + r.totalWithdrawal, 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-4 py-3 text-right text-blue-400 font-bold border-r border-slate-700/30">
+                              ₹{dailyReports.reduce((sum, r) => sum + r.playerBalance, 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className={`px-4 py-3 text-right font-bold border-r border-slate-700/30 ${dailyReports.reduce((sum, r) => sum + r.profitLoss, 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {dailyReports.reduce((sum, r) => sum + r.profitLoss, 0) >= 0 ? '+' : ''}₹{dailyReports.reduce((sum, r) => sum + r.profitLoss, 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-4 py-3 border-r border-slate-700/30"></td>
+                            <td className="px-4 py-3"></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

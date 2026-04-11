@@ -36,6 +36,7 @@ model User {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   bankAccounts BankAccount[]
   transactions Transaction[]
+  dailyReports DailyReport[]
 
   @@map("users")
 }
@@ -51,7 +52,8 @@ model Branch {
   isActive     Boolean       @default(true) @map("is_active")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
-  bankAccounts BankAccount[]
+  bankAccounts  BankAccount[]
+  dailyReports  DailyReport[]
 
   @@map("branches")
 }
@@ -119,4 +121,22 @@ model Transaction {
   createdAt       DateTime        @default(now()) @map("created_at")
 
   @@map("transactions")
+}
+
+model DailyReport {
+  id              String   @id @default(uuid())
+  date            DateTime @db.Date
+  totalDeposit    Float    @map("total_deposit")
+  totalWithdrawal Float    @map("total_withdrawal")
+  playerBalance   Float    @map("player_balance")
+  profitLoss      Float    @map("profit_loss")
+  branchId        String   @map("branch_id")
+  branch          Branch   @relation(fields: [branchId], references: [id])
+  createdById     String   @map("created_by_id")
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([branchId, date])
+  @@map("daily_reports")
 }
