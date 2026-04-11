@@ -11,7 +11,7 @@ export class DailyReportsController {
 
   @Post()
   async create(@Body() dto: CreateDailyReportDto, @Request() req: any) {
-    return this.dailyReportsService.create(dto, req.user.id);
+    return this.dailyReportsService.create(dto, req.user.sub);
   }
 
   @Get('branch/:branchId')
