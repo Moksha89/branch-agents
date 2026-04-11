@@ -10,7 +10,6 @@ import {
   GitBranch,
   Plus,
   Building2,
-  MapPin,
   Hash,
   X,
 } from 'lucide-react';
@@ -36,14 +35,7 @@ export default function BranchesPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    code: '',
-    address: '',
-    city: '',
-    state: '',
-    pincode: '',
-  });
+  const [branchName, setBranchName] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -94,14 +86,7 @@ export default function BranchesPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: form.name,
-          code: form.code,
-          address: form.address || undefined,
-          city: form.city || undefined,
-          state: form.state || undefined,
-          pincode: form.pincode || undefined,
-        }),
+        body: JSON.stringify({ name: branchName }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -109,7 +94,7 @@ export default function BranchesPage() {
         return;
       }
       setShowCreate(false);
-      setForm({ name: '', code: '', address: '', city: '', state: '', pincode: '' });
+      setBranchName('');
       await fetchBranches();
     } catch {
       setError('Failed to create branch');
@@ -159,58 +144,11 @@ export default function BranchesPage() {
                 <div className="space-y-2">
                   <Label className="text-slate-300">Branch Name *</Label>
                   <Input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g. Main Branch"
+                    value={branchName}
+                    onChange={(e) => setBranchName(e.target.value)}
+                    placeholder="e.g. Hyderabad Branch"
                     required
-                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Branch Code *</Label>
-                  <Input
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                    placeholder="e.g. BR001"
-                    required
-                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Address</Label>
-                  <Input
-                    value={form.address}
-                    onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    placeholder="Street address"
-                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">City</Label>
-                    <Input
-                      value={form.city}
-                      onChange={(e) => setForm({ ...form, city: e.target.value })}
-                      placeholder="City"
-                      className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">State</Label>
-                    <Input
-                      value={form.state}
-                      onChange={(e) => setForm({ ...form, state: e.target.value })}
-                      placeholder="State"
-                      className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Pincode</Label>
-                  <Input
-                    value={form.pincode}
-                    onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-                    placeholder="Pincode"
+                    autoFocus
                     className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                   />
                 </div>
@@ -273,12 +211,6 @@ export default function BranchesPage() {
                 <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors mb-1">
                   {branch.name}
                 </h3>
-                {(branch.city || branch.state) && (
-                  <div className="flex items-center gap-1 text-sm text-slate-400 mb-3">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {[branch.city, branch.state].filter(Boolean).join(', ')}
-                  </div>
-                )}
                 <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-3 pt-3 border-t border-slate-700/50">
                   <Hash className="h-3.5 w-3.5" />
                   {branch._count.bankAccounts} bank account{branch._count.bankAccounts !== 1 ? 's' : ''}

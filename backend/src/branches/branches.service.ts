@@ -6,14 +6,26 @@ import { CreateBranchDto } from './dto/create-branch.dto';
 export class BranchesService {
   constructor(private prisma: PrismaService) {}
 
+  private generateCode(name: string): string {
+    const prefix = name
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 4)
+      .toUpperCase();
+    const suffix = Date.now().toString(36).slice(-4).toUpperCase();
+    return `${prefix}-${suffix}`;
+  }
+
   async create(dto: CreateBranchDto) {
     const existing = await this.prisma.branch.findFirst({
-      where: { OR: [{ name: dto.name }, { code: dto.code }] },
+      where: { name: dto.name },
     });
     if (existing) {
-      throw new ConflictException('Branch with this name or code already exists');
+      throw new ConflictException('Branch with this name already exists');
     }
-    return this.prisma.branch.create({ data: dto });
+    const code = this.generateCode(dto.name);
+    return this.prisma.branch.create({
+      data: { name: dto.name, code },
+    });
   }
 
   async findAll() {
