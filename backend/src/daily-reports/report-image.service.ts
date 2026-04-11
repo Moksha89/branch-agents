@@ -61,8 +61,8 @@ export class ReportImageService {
     for (const acc of accounts) {
       if (!statusMap[acc.status]) statusMap[acc.status] = { count: 0, total: 0 };
       statusMap[acc.status].count++;
-      statusMap[acc.status].total += acc.bankBalance;
-      grandTotal += acc.bankBalance;
+      statusMap[acc.status].total += Number(acc.bankBalance);
+      grandTotal += Number(acc.bankBalance);
     }
     const statusSummaries: StatusSummary[] = Object.entries(statusMap).map(([status, data]) => ({
       status,
@@ -73,19 +73,19 @@ export class ReportImageService {
     return this.drawReport(
       report.branch.name,
       report.date,
-      accounts,
+      accounts.map(a => ({ ...a, bankBalance: Number(a.bankBalance) })),
       statusSummaries,
       grandTotal,
-      report.totalDeposit,
-      report.totalWithdrawal,
-      report.profitLoss,
-      report.playerBalance,
+      Number(report.totalDeposit),
+      Number(report.totalWithdrawal),
+      Number(report.profitLoss),
+      Number(report.playerBalance),
       yesterdayReport
         ? {
-            totalDeposit: yesterdayReport.totalDeposit,
-            totalWithdrawal: yesterdayReport.totalWithdrawal,
-            profitLoss: yesterdayReport.profitLoss,
-            playerBalance: yesterdayReport.playerBalance,
+            totalDeposit: Number(yesterdayReport.totalDeposit),
+            totalWithdrawal: Number(yesterdayReport.totalWithdrawal),
+            profitLoss: Number(yesterdayReport.profitLoss),
+            playerBalance: Number(yesterdayReport.playerBalance),
           }
         : null,
       report.createdBy.fullName,

@@ -59,8 +59,8 @@ export class DailyReportsService {
       throw new NotFoundException('Daily report not found');
     }
 
-    const totalDeposit = dto.totalDeposit !== undefined ? dto.totalDeposit : existing.totalDeposit;
-    const totalWithdrawal = dto.totalWithdrawal !== undefined ? dto.totalWithdrawal : existing.totalWithdrawal;
+    const totalDeposit = dto.totalDeposit !== undefined ? dto.totalDeposit : Number(existing.totalDeposit);
+    const totalWithdrawal = dto.totalWithdrawal !== undefined ? dto.totalWithdrawal : Number(existing.totalWithdrawal);
     const profitLoss = totalDeposit - totalWithdrawal;
 
     return this.prisma.dailyReport.update({
@@ -68,7 +68,7 @@ export class DailyReportsService {
       data: {
         totalDeposit,
         totalWithdrawal,
-        playerBalance: dto.playerBalance !== undefined ? dto.playerBalance : existing.playerBalance,
+        playerBalance: dto.playerBalance !== undefined ? dto.playerBalance : Number(existing.playerBalance),
         profitLoss,
       },
       include: {

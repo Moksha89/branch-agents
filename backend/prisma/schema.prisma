@@ -76,7 +76,7 @@ model BankAccount {
   debitCardCvv        String        @map("debit_card_cvv")
   netbankingUsername  String        @map("netbanking_username")
   netbankingPassword  String        @map("netbanking_password")
-  bankBalance         Float         @default(0) @map("bank_balance")
+  bankBalance         Decimal       @default(0) @map("bank_balance") @db.Decimal(15, 2)
   status              AccountStatus @default(ACTIVE)
   branchId            String        @map("branch_id")
   branch              Branch        @relation(fields: [branchId], references: [id])
@@ -111,9 +111,9 @@ enum TransactionType {
 model Transaction {
   id              String          @id @default(uuid())
   type            TransactionType
-  amount          Float
-  balanceBefore   Float           @map("balance_before")
-  balanceAfter    Float           @map("balance_after")
+  amount          Decimal       @db.Decimal(15, 2)
+  balanceBefore   Decimal       @map("balance_before") @db.Decimal(15, 2)
+  balanceAfter    Decimal       @map("balance_after") @db.Decimal(15, 2)
   description     String?
   fromAccountId   String          @map("from_account_id")
   fromAccount     BankAccount     @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: Cascade)
@@ -133,10 +133,10 @@ model Transaction {
 model DailyReport {
   id              String   @id @default(uuid())
   date            DateTime @db.Date
-  totalDeposit    Float    @map("total_deposit")
-  totalWithdrawal Float    @map("total_withdrawal")
-  playerBalance   Float    @map("player_balance")
-  profitLoss      Float    @map("profit_loss")
+  totalDeposit    Decimal  @map("total_deposit") @db.Decimal(15, 2)
+  totalWithdrawal Decimal  @map("total_withdrawal") @db.Decimal(15, 2)
+  playerBalance   Decimal  @map("player_balance") @db.Decimal(15, 2)
+  profitLoss      Decimal  @map("profit_loss") @db.Decimal(15, 2)
   branchId        String   @map("branch_id")
   branch          Branch   @relation(fields: [branchId], references: [id])
   createdById     String   @map("created_by_id")

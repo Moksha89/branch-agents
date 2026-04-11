@@ -49,7 +49,7 @@ export class TransactionsService {
         case 'DEPOSIT': {
           this.validateAccountStatus(fromAccount, 'credit');
 
-          const balanceBefore = fromAccount.bankBalance;
+          const balanceBefore = Number(fromAccount.bankBalance);
           const balanceAfter = balanceBefore + amount;
 
           const transaction = await tx.transaction.create({
@@ -77,12 +77,12 @@ export class TransactionsService {
         case 'WITHDRAWAL': {
           this.validateAccountStatus(fromAccount, 'debit');
 
-          if (fromAccount.bankBalance < amount) {
+          if (Number(fromAccount.bankBalance) < amount) {
             throw new BadRequestException(
-              `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
+              `Insufficient balance. Available: ₹${Number(fromAccount.bankBalance).toLocaleString('en-IN')}`,
             );
           }
-          const balanceBefore = fromAccount.bankBalance;
+          const balanceBefore = Number(fromAccount.bankBalance);
           const balanceAfter = balanceBefore - amount;
 
           const transaction = await tx.transaction.create({
@@ -127,15 +127,15 @@ export class TransactionsService {
               'Internal transfer must be within the same branch. Use Out Transfer for cross-branch.',
             );
           }
-          if (fromAccount.bankBalance < amount) {
+          if (Number(fromAccount.bankBalance) < amount) {
             throw new BadRequestException(
-              `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
+              `Insufficient balance. Available: ₹${Number(fromAccount.bankBalance).toLocaleString('en-IN')}`,
             );
           }
 
-          const fromBefore = fromAccount.bankBalance;
+          const fromBefore = Number(fromAccount.bankBalance);
           const fromAfter = fromBefore - amount;
-          const toBefore = toAccount.bankBalance;
+          const toBefore = Number(toAccount.bankBalance);
           const toAfter = toBefore + amount;
 
           const senderTx = await tx.transaction.create({
@@ -200,15 +200,15 @@ export class TransactionsService {
               'Out transfer must be to a different branch. Use Transfer for same branch.',
             );
           }
-          if (fromAccount.bankBalance < amount) {
+          if (Number(fromAccount.bankBalance) < amount) {
             throw new BadRequestException(
-              `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
+              `Insufficient balance. Available: ₹${Number(fromAccount.bankBalance).toLocaleString('en-IN')}`,
             );
           }
 
-          const fromBefore = fromAccount.bankBalance;
+          const fromBefore = Number(fromAccount.bankBalance);
           const fromAfter = fromBefore - amount;
-          const toBefore = toAccount.bankBalance;
+          const toBefore = Number(toAccount.bankBalance);
           const toAfter = toBefore + amount;
 
           const senderTx = await tx.transaction.create({
