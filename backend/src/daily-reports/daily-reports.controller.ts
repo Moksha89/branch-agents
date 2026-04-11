@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
 import { DailyReportsService } from './daily-reports.service';
 import { ReportImageService } from './report-image.service';
 import { CreateDailyReportDto } from './dto/create-daily-report.dto';
@@ -15,7 +16,8 @@ export class DailyReportsController {
   ) {}
 
   @Post()
-  async create(@Body() dto: CreateDailyReportDto, @Request() req: any) {
+  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  async create(@Body() dto: CreateDailyReportDto, @Request() req: { user: { sub: string } }) {
     return this.dailyReportsService.create(dto, req.user.sub);
   }
 
@@ -46,6 +48,7 @@ export class DailyReportsController {
   }
 
   @Delete(':id')
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async remove(@Param('id') id: string) {
     return this.dailyReportsService.remove(id);
   }

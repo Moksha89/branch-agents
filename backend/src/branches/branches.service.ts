@@ -1,6 +1,7 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
+import { UpdateBranchDto } from './dto/update-branch.dto';
 
 @Injectable()
 export class BranchesService {
@@ -26,6 +27,42 @@ export class BranchesService {
     return this.prisma.branch.create({
       data: { name: dto.name, code },
     });
+  }
+
+  // FIX #15: Add branch update
+  async update(id: string, dto: UpdateBranchDto) {
+    const branch = await this.prisma.branch.findUnique({ where: { id } });
+    if (!branch) {
+      throw new NotFoundException('Branch not found');
+    }
+    if (dto.name) {
+      const existing = await this.prisma.branch.findFirst({
+        where: { name: dto.name, NOT: { id } },
+      });
+      if (existing) {
+        throw new ConflictException('Branch with this name already exists');
+      }
+    }
+    return this.prisma.branch.update({
+      where: { id },
+      data: { ...(dto.name && { name: dto.name }) },
+    });
+  }
+
+  // FIX #15: Add branch delete (only if no accounts)
+  async remove(id: string) {
+    const branch = await this.prisma.branch.findUnique({ where: { id } });
+    if (!branch) {
+      throw new NotFoundException('Branch not found');
+    }
+    const accountCount = await this.prisma.bankAccount.count({ where: { branchId: id } });
+    if (accountCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete branch with ${accountCount} account(s). Remove or move accounts first.`,
+      );
+    }
+    await this.prisma.branch.delete({ where: { id } });
+    return { deleted: true };
   }
 
   async findAll() {

@@ -155,6 +155,18 @@ export default function BranchDetailPage() {
   const [statusDropdownAccountId, setStatusDropdownAccountId] = useState<string | null>(null);
   const [statusChanging, setStatusChanging] = useState(false);
 
+  // Toast/notification state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Search filter for accounts
+  const [accountSearch, setAccountSearch] = useState('');
+
+  // Loading states for PNG/CSV download
+  const [downloadingPNG, setDownloadingPNG] = useState<string | null>(null);
+
+  // Delete report confirmation
+  const [confirmDeleteReportId, setConfirmDeleteReportId] = useState<string | null>(null);
+
   // Date filters
   const [branchTxDateFrom, setBranchTxDateFrom] = useState('');
   const [branchTxDateTo, setBranchTxDateTo] = useState('');
@@ -181,6 +193,11 @@ export default function BranchDetailPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
   const getToken = () => localStorage.getItem('accessToken');
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const fetchBranch = useCallback(async () => {
     const token = getToken();
@@ -222,7 +239,7 @@ export default function BranchDetailPage() {
         setTransactions(data);
       }
     } catch {
-      // silently fail
+      showToast('Failed to load transactions', 'error');
     } finally {
       setTxLoading(false);
     }
@@ -241,7 +258,7 @@ export default function BranchDetailPage() {
         setBranchTransactions(data);
       }
     } catch {
-      // silently fail
+      showToast('Failed to load branch transactions', 'error');
     } finally {
       setBranchTxLoading(false);
     }
@@ -259,7 +276,7 @@ export default function BranchDetailPage() {
         setAllBranches(data);
       }
     } catch {
-      // silently fail
+      showToast('Failed to load branches', 'error');
     }
   }, [apiUrl]);
 
@@ -280,7 +297,7 @@ export default function BranchDetailPage() {
         setDailyReports(data);
       }
     } catch {
-      // silently fail
+      showToast('Failed to load daily reports', 'error');
     } finally {
       setDailyReportsLoading(false);
     }
@@ -427,23 +444,25 @@ export default function BranchDetailPage() {
 
     setSaving(true);
     try {
+      const { bankBalance, ...editData } = editForm;
       const res = await fetch(`${apiUrl}/bank-accounts/${selectedAccount.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...editForm,
-          bankBalance: Number(editForm.bankBalance) || 0,
-        }),
+        body: JSON.stringify(editData),
       });
       if (res.ok) {
         closePopup();
         await fetchBranch();
+        showToast('Account updated successfully');
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Failed to update account', 'error');
       }
     } catch {
-      // silently fail
+      showToast('Failed to update account', 'error');
     } finally {
       setSaving(false);
     }
@@ -463,9 +482,13 @@ export default function BranchDetailPage() {
       if (res.ok) {
         closePopup();
         await fetchBranch();
+        showToast('Account deleted successfully');
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Failed to delete account', 'error');
       }
     } catch {
-      // silently fail
+      showToast('Failed to delete account', 'error');
     } finally {
       setDeleting(false);
     }
@@ -605,6 +628,7 @@ export default function BranchDetailPage() {
   const handleDownloadReportPNG = async (reportId: string, reportDate: string) => {
     const token = getToken();
     if (!token) return;
+    setDownloadingPNG(reportId);
     try {
       const res = await fetch(`${apiUrl}/daily-reports/${reportId}/png`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -617,9 +641,13 @@ export default function BranchDetailPage() {
         link.download = `daily-report-${branch?.name.replace(/\s+/g, '_') || 'branch'}-${reportDate.split('T')[0]}.png`;
         link.click();
         URL.revokeObjectURL(url);
+      } else {
+        showToast('Failed to download PNG report', 'error');
       }
     } catch {
-      // silently fail
+      showToast('Failed to download PNG report', 'error');
+    } finally {
+      setDownloadingPNG(null);
     }
   };
 
@@ -634,9 +662,14 @@ export default function BranchDetailPage() {
       });
       if (res.ok) {
         await fetchDailyReports();
+        showToast('Report deleted');
+        setConfirmDeleteReportId(null);
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Failed to delete report', 'error');
       }
     } catch {
-      // silently fail
+      showToast('Failed to delete report', 'error');
     } finally {
       setDeletingReportId(null);
     }
@@ -657,9 +690,13 @@ export default function BranchDetailPage() {
       });
       if (res.ok) {
         await fetchBranch();
+        showToast('Status updated');
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Failed to change status', 'error');
       }
     } catch {
-      // silently fail
+      showToast('Failed to change status', 'error');
     } finally {
       setStatusChanging(false);
       setStatusDropdownAccountId(null);
@@ -685,6 +722,40 @@ export default function BranchDetailPage() {
 
   const filteredBranchTx = filterByDate(branchTransactions, branchTxDateFrom, branchTxDateTo);
   const filteredAcctTx = filterByDate(transactions, acctTxDateFrom, acctTxDateTo);
+
+  // FIX #17: Filter accounts by search
+  const filteredAccounts = (branch?.bankAccounts || []).filter((account) => {
+    if (!accountSearch) return true;
+    const search = accountSearch.toLowerCase();
+    return (
+      account.fullName.toLowerCase().includes(search) ||
+      account.bankName.toLowerCase().includes(search) ||
+      account.accountNumber.toLowerCase().includes(search) ||
+      account.mobileNumber.includes(search)
+    );
+  });
+
+  // FIX #19: CSV export for daily reports
+  const downloadDailyReportsCSV = () => {
+    if (!dailyReports.length || !branch) return;
+    const headers = ['Date', 'Total Deposit', 'Total Withdrawal', 'Player Balance', 'P/L', 'Created By'];
+    const rows = dailyReports.map((r) => [
+      new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      r.totalDeposit.toLocaleString('en-IN'),
+      r.totalWithdrawal.toLocaleString('en-IN'),
+      r.playerBalance.toLocaleString('en-IN'),
+      (r.profitLoss >= 0 ? '+' : '') + r.profitLoss.toLocaleString('en-IN'),
+      r.createdBy.fullName,
+    ]);
+    const csvContent = [headers, ...rows].map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${branch.name.replace(/\s+/g, '_')}_DailyReports.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getTransferTargetAccounts = () => {
     if (txType === 'TRANSFER') {
@@ -796,6 +867,14 @@ export default function BranchDetailPage() {
 
   return (
     <Sidebar>
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
+          toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
+        }`}>
+          {toast.message}
+        </div>
+      )}
       <div className="max-w-7xl mx-auto">
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -926,6 +1005,17 @@ export default function BranchDetailPage() {
                     </Link>
                   </div>
                 ) : (
+                  <>
+                    {/* FIX #17: Search bar */}
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        placeholder="Search by name, bank, account #, or mobile..."
+                        value={accountSearch}
+                        onChange={(e) => setAccountSearch(e.target.value)}
+                        className="w-full max-w-md px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                      />
+                    </div>
                   <div className="rounded-xl border border-slate-700/50 overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm border-collapse">
@@ -943,7 +1033,7 @@ export default function BranchDetailPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {branch.bankAccounts.map((account, idx) => (
+                          {filteredAccounts.map((account, idx) => (
                             <tr
                               key={account.id}
                               className={`border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors cursor-pointer ${
@@ -1043,6 +1133,7 @@ export default function BranchDetailPage() {
                       </table>
                     </div>
                   </div>
+                  </>
                 )}
               </>
             )}
@@ -1199,7 +1290,16 @@ export default function BranchDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex justify-end mb-4">
+                  <div className="flex justify-end gap-2 mb-4">
+                    {dailyReports.length > 0 && (
+                      <button
+                        onClick={downloadDailyReportsCSV}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-600 transition-colors"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download CSV
+                      </button>
+                    )}
                     <button
                       onClick={() => { setShowReportForm(true); setEditingReportId(null); setReportDate(new Date().toISOString().split('T')[0]); setReportDeposit(''); setReportWithdrawal(''); setReportPlayerBalance(''); setReportError(''); }}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -1273,10 +1373,11 @@ export default function BranchDetailPage() {
                                 <div className="flex items-center justify-center gap-1">
                                   <button
                                     onClick={() => handleDownloadReportPNG(report.id, report.date)}
-                                    className="px-2 py-1 rounded text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors"
+                                    disabled={downloadingPNG === report.id}
+                                    className="px-2 py-1 rounded text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors disabled:opacity-50"
                                     title="Download PNG Report"
                                   >
-                                    PNG
+                                    {downloadingPNG === report.id ? '...' : 'PNG'}
                                   </button>
                                   <button
                                     onClick={() => handleEditReport(report)}
@@ -1284,13 +1385,30 @@ export default function BranchDetailPage() {
                                   >
                                     Edit
                                   </button>
-                                  <button
-                                    onClick={() => handleDeleteReport(report.id)}
-                                    disabled={deletingReportId === report.id}
-                                    className="px-2 py-1 rounded text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors disabled:opacity-50"
-                                  >
-                                    {deletingReportId === report.id ? '...' : 'Del'}
-                                  </button>
+                                  {confirmDeleteReportId === report.id ? (
+                                    <>
+                                      <button
+                                        onClick={() => handleDeleteReport(report.id)}
+                                        disabled={deletingReportId === report.id}
+                                        className="px-2 py-1 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                                      >
+                                        {deletingReportId === report.id ? '...' : 'Yes'}
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmDeleteReportId(null)}
+                                        className="px-2 py-1 rounded text-xs font-medium bg-slate-600 text-slate-300 hover:bg-slate-500 transition-colors"
+                                      >
+                                        No
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => setConfirmDeleteReportId(report.id)}
+                                      className="px-2 py-1 rounded text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors"
+                                    >
+                                      Del
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1631,12 +1749,10 @@ export default function BranchDetailPage() {
                           </div>
                           <div>
                             <Label className="text-slate-400 text-xs">Bank Balance</Label>
-                            <Input
-                              type="number"
-                              value={editForm.bankBalance || 0}
-                              onChange={(e) => setEditForm({ ...editForm, bankBalance: Number(e.target.value) })}
-                              className="bg-slate-800/60 border-slate-700 text-white mt-1"
-                            />
+                            <p className="text-sm text-slate-300 mt-1 px-3 py-2 bg-slate-800/30 border border-slate-700/50 rounded-md">
+                              ₹{(editForm.bankBalance || 0).toLocaleString('en-IN')}
+                              <span className="text-slate-500 text-xs ml-2">(use transactions to change)</span>
+                            </p>
                           </div>
                           <div>
                             <Label className="text-slate-400 text-xs">Account Status</Label>

@@ -87,6 +87,9 @@ model BankAccount {
   transactionsFrom    Transaction[] @relation("FromAccount")
   transactionsTo      Transaction[] @relation("ToAccount")
 
+  @@index([branchId])
+  @@index([createdById])
+  @@index([status])
   @@map("bank_accounts")
 }
 
@@ -120,6 +123,10 @@ model Transaction {
   createdBy       User            @relation(fields: [createdById], references: [id])
   createdAt       DateTime        @default(now()) @map("created_at")
 
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([createdAt])
+  @@index([type])
   @@map("transactions")
 }
 
@@ -137,6 +144,8 @@ model DailyReport {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
+  @@index([branchId])
+  @@index([createdById])
   @@unique([branchId, date])
   @@map("daily_reports")
 }

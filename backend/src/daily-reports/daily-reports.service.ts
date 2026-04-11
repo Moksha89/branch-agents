@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateDailyReportDto } from './dto/create-daily-report.dto';
 import { UpdateDailyReportDto } from './dto/update-daily-report.dto';
 
@@ -9,20 +10,28 @@ export class DailyReportsService {
 
   async create(dto: CreateDailyReportDto, userId: string) {
     const profitLoss = dto.totalDeposit - dto.totalWithdrawal;
-    return this.prisma.dailyReport.create({
-      data: {
-        date: new Date(dto.date),
-        totalDeposit: dto.totalDeposit,
-        totalWithdrawal: dto.totalWithdrawal,
-        playerBalance: dto.playerBalance,
-        profitLoss,
-        branchId: dto.branchId,
-        createdById: userId,
-      },
-      include: {
-        createdBy: { select: { id: true, fullName: true, username: true } },
-      },
-    });
+    try {
+      return await this.prisma.dailyReport.create({
+        data: {
+          date: new Date(dto.date),
+          totalDeposit: dto.totalDeposit,
+          totalWithdrawal: dto.totalWithdrawal,
+          playerBalance: dto.playerBalance,
+          profitLoss,
+          branchId: dto.branchId,
+          createdById: userId,
+        },
+        include: {
+          createdBy: { select: { id: true, fullName: true, username: true } },
+        },
+      });
+    } catch (error) {
+      // FIX #14: Friendly error for duplicate daily report date
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('A daily report already exists for this date in this branch.');
+      }
+      throw error;
+    }
   }
 
   async findByBranch(branchId: string) {
@@ -46,7 +55,9 @@ export class DailyReportsService {
 
   async update(id: string, dto: UpdateDailyReportDto) {
     const existing = await this.prisma.dailyReport.findUnique({ where: { id } });
-    if (!existing) return null;
+    if (!existing) {
+      throw new NotFoundException('Daily report not found');
+    }
 
     const totalDeposit = dto.totalDeposit !== undefined ? dto.totalDeposit : existing.totalDeposit;
     const totalWithdrawal = dto.totalWithdrawal !== undefined ? dto.totalWithdrawal : existing.totalWithdrawal;
@@ -67,6 +78,10 @@ export class DailyReportsService {
   }
 
   async remove(id: string) {
+    const existing = await this.prisma.dailyReport.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Daily report not found');
+    }
     return this.prisma.dailyReport.delete({ where: { id } });
   }
 }

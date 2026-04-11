@@ -10,24 +10,45 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 export class TransactionsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateTransactionDto, userId: string) {
-    const fromAccount = await this.prisma.bankAccount.findUnique({
-      where: { id: dto.fromAccountId },
-      include: { branch: true },
-    });
-    if (!fromAccount) {
-      throw new NotFoundException('Source account not found');
+  // FIX #2: Enforce account status on transactions
+  private validateAccountStatus(account: { status: string; fullName: string }, action: 'debit' | 'credit') {
+    const { status, fullName } = account;
+    if (status === 'CLOSED') {
+      throw new BadRequestException(`Account "${fullName}" is CLOSED. No transactions allowed.`);
     }
+    if (status === 'CYBER') {
+      throw new BadRequestException(`Account "${fullName}" is under CYBER investigation. No transactions allowed.`);
+    }
+    if (status === 'DEBIT_FREEZE' && action === 'debit') {
+      throw new BadRequestException(`Account "${fullName}" has DEBIT FREEZE. Withdrawals and outgoing transfers are blocked.`);
+    }
+    if (status === 'CREDIT_FREEZE' && action === 'credit') {
+      throw new BadRequestException(`Account "${fullName}" has CREDIT FREEZE. Deposits and incoming transfers are blocked.`);
+    }
+  }
 
+  // FIX #7: Use interactive transactions to prevent race conditions
+  async create(dto: CreateTransactionDto, userId: string) {
     const amount = dto.amount;
 
-    switch (dto.type) {
-      case 'DEPOSIT': {
-        const balanceBefore = fromAccount.bankBalance;
-        const balanceAfter = balanceBefore + amount;
+    return this.prisma.$transaction(async (tx) => {
+      // Lock the source account row with findFirst + select for update behavior
+      const fromAccount = await tx.bankAccount.findUnique({
+        where: { id: dto.fromAccountId },
+        include: { branch: true },
+      });
+      if (!fromAccount) {
+        throw new NotFoundException('Source account not found');
+      }
 
-        const [transaction] = await this.prisma.$transaction([
-          this.prisma.transaction.create({
+      switch (dto.type) {
+        case 'DEPOSIT': {
+          this.validateAccountStatus(fromAccount, 'credit');
+
+          const balanceBefore = fromAccount.bankBalance;
+          const balanceAfter = balanceBefore + amount;
+
+          const transaction = await tx.transaction.create({
             data: {
               type: 'DEPOSIT',
               amount,
@@ -41,26 +62,26 @@ export class TransactionsService {
               fromAccount: { select: { id: true, fullName: true, accountNumber: true } },
               createdBy: { select: { id: true, fullName: true, username: true } },
             },
-          }),
-          this.prisma.bankAccount.update({
+          });
+          await tx.bankAccount.update({
             where: { id: fromAccount.id },
             data: { bankBalance: balanceAfter },
-          }),
-        ]);
-        return transaction;
-      }
-
-      case 'WITHDRAWAL': {
-        if (fromAccount.bankBalance < amount) {
-          throw new BadRequestException(
-            `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
-          );
+          });
+          return transaction;
         }
-        const balanceBefore = fromAccount.bankBalance;
-        const balanceAfter = balanceBefore - amount;
 
-        const [transaction] = await this.prisma.$transaction([
-          this.prisma.transaction.create({
+        case 'WITHDRAWAL': {
+          this.validateAccountStatus(fromAccount, 'debit');
+
+          if (fromAccount.bankBalance < amount) {
+            throw new BadRequestException(
+              `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
+            );
+          }
+          const balanceBefore = fromAccount.bankBalance;
+          const balanceAfter = balanceBefore - amount;
+
+          const transaction = await tx.transaction.create({
             data: {
               type: 'WITHDRAWAL',
               amount,
@@ -74,44 +95,46 @@ export class TransactionsService {
               fromAccount: { select: { id: true, fullName: true, accountNumber: true } },
               createdBy: { select: { id: true, fullName: true, username: true } },
             },
-          }),
-          this.prisma.bankAccount.update({
+          });
+          await tx.bankAccount.update({
             where: { id: fromAccount.id },
             data: { bankBalance: balanceAfter },
-          }),
-        ]);
-        return transaction;
-      }
-
-      case 'TRANSFER': {
-        if (!dto.toAccountId) {
-          throw new BadRequestException('Destination account is required for internal transfer');
-        }
-        const toAccount = await this.prisma.bankAccount.findUnique({
-          where: { id: dto.toAccountId },
-          include: { branch: true },
-        });
-        if (!toAccount) {
-          throw new NotFoundException('Destination account not found');
-        }
-        if (toAccount.branchId !== fromAccount.branchId) {
-          throw new BadRequestException(
-            'Internal transfer must be within the same branch. Use Out Transfer for cross-branch.',
-          );
-        }
-        if (fromAccount.bankBalance < amount) {
-          throw new BadRequestException(
-            `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
-          );
+          });
+          return transaction;
         }
 
-        const fromBefore = fromAccount.bankBalance;
-        const fromAfter = fromBefore - amount;
-        const toBefore = toAccount.bankBalance;
-        const toAfter = toBefore + amount;
+        case 'TRANSFER': {
+          if (!dto.toAccountId) {
+            throw new BadRequestException('Destination account is required for internal transfer');
+          }
+          this.validateAccountStatus(fromAccount, 'debit');
 
-        const [senderTx] = await this.prisma.$transaction([
-          this.prisma.transaction.create({
+          const toAccount = await tx.bankAccount.findUnique({
+            where: { id: dto.toAccountId },
+            include: { branch: true },
+          });
+          if (!toAccount) {
+            throw new NotFoundException('Destination account not found');
+          }
+          this.validateAccountStatus(toAccount, 'credit');
+
+          if (toAccount.branchId !== fromAccount.branchId) {
+            throw new BadRequestException(
+              'Internal transfer must be within the same branch. Use Out Transfer for cross-branch.',
+            );
+          }
+          if (fromAccount.bankBalance < amount) {
+            throw new BadRequestException(
+              `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
+            );
+          }
+
+          const fromBefore = fromAccount.bankBalance;
+          const fromAfter = fromBefore - amount;
+          const toBefore = toAccount.bankBalance;
+          const toAfter = toBefore + amount;
+
+          const senderTx = await tx.transaction.create({
             data: {
               type: 'TRANSFER',
               amount,
@@ -129,8 +152,8 @@ export class TransactionsService {
               toAccount: { select: { id: true, fullName: true, accountNumber: true } },
               createdBy: { select: { id: true, fullName: true, username: true } },
             },
-          }),
-          this.prisma.transaction.create({
+          });
+          await tx.transaction.create({
             data: {
               type: 'DEPOSIT',
               amount,
@@ -141,48 +164,50 @@ export class TransactionsService {
               toAccountId: fromAccount.id,
               createdById: userId,
             },
-          }),
-          this.prisma.bankAccount.update({
+          });
+          await tx.bankAccount.update({
             where: { id: fromAccount.id },
             data: { bankBalance: fromAfter },
-          }),
-          this.prisma.bankAccount.update({
+          });
+          await tx.bankAccount.update({
             where: { id: toAccount.id },
             data: { bankBalance: toAfter },
-          }),
-        ]);
-        return senderTx;
-      }
-
-      case 'OUT_TRANSFER': {
-        if (!dto.toAccountId) {
-          throw new BadRequestException('Destination account is required for out transfer');
-        }
-        const toAccount = await this.prisma.bankAccount.findUnique({
-          where: { id: dto.toAccountId },
-          include: { branch: true },
-        });
-        if (!toAccount) {
-          throw new NotFoundException('Destination account not found');
-        }
-        if (toAccount.branchId === fromAccount.branchId) {
-          throw new BadRequestException(
-            'Out transfer must be to a different branch. Use Transfer for same branch.',
-          );
-        }
-        if (fromAccount.bankBalance < amount) {
-          throw new BadRequestException(
-            `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
-          );
+          });
+          return senderTx;
         }
 
-        const fromBefore = fromAccount.bankBalance;
-        const fromAfter = fromBefore - amount;
-        const toBefore = toAccount.bankBalance;
-        const toAfter = toBefore + amount;
+        case 'OUT_TRANSFER': {
+          if (!dto.toAccountId) {
+            throw new BadRequestException('Destination account is required for out transfer');
+          }
+          this.validateAccountStatus(fromAccount, 'debit');
 
-        const [senderTx] = await this.prisma.$transaction([
-          this.prisma.transaction.create({
+          const toAccount = await tx.bankAccount.findUnique({
+            where: { id: dto.toAccountId },
+            include: { branch: true },
+          });
+          if (!toAccount) {
+            throw new NotFoundException('Destination account not found');
+          }
+          this.validateAccountStatus(toAccount, 'credit');
+
+          if (toAccount.branchId === fromAccount.branchId) {
+            throw new BadRequestException(
+              'Out transfer must be to a different branch. Use Transfer for same branch.',
+            );
+          }
+          if (fromAccount.bankBalance < amount) {
+            throw new BadRequestException(
+              `Insufficient balance. Available: ₹${fromAccount.bankBalance.toLocaleString('en-IN')}`,
+            );
+          }
+
+          const fromBefore = fromAccount.bankBalance;
+          const fromAfter = fromBefore - amount;
+          const toBefore = toAccount.bankBalance;
+          const toAfter = toBefore + amount;
+
+          const senderTx = await tx.transaction.create({
             data: {
               type: 'OUT_TRANSFER',
               amount,
@@ -200,8 +225,8 @@ export class TransactionsService {
               toAccount: { select: { id: true, fullName: true, accountNumber: true } },
               createdBy: { select: { id: true, fullName: true, username: true } },
             },
-          }),
-          this.prisma.transaction.create({
+          });
+          await tx.transaction.create({
             data: {
               type: 'DEPOSIT',
               amount,
@@ -212,22 +237,22 @@ export class TransactionsService {
               toAccountId: fromAccount.id,
               createdById: userId,
             },
-          }),
-          this.prisma.bankAccount.update({
+          });
+          await tx.bankAccount.update({
             where: { id: fromAccount.id },
             data: { bankBalance: fromAfter },
-          }),
-          this.prisma.bankAccount.update({
+          });
+          await tx.bankAccount.update({
             where: { id: toAccount.id },
             data: { bankBalance: toAfter },
-          }),
-        ]);
-        return senderTx;
-      }
+          });
+          return senderTx;
+        }
 
-      default:
-        throw new BadRequestException('Invalid transaction type');
-    }
+        default:
+          throw new BadRequestException('Invalid transaction type');
+      }
+    }, { isolationLevel: 'Serializable' });
   }
 
   async findByAccount(accountId: string) {
@@ -256,7 +281,6 @@ export class TransactionsService {
   }
 
   async findByBranch(branchId: string) {
-    // Get all account IDs in this branch
     const accounts = await this.prisma.bankAccount.findMany({
       where: { branchId },
       select: { id: true },

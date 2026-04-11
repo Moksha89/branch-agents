@@ -18,6 +18,7 @@ import { BankAccountsService } from './bank-accounts.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('bank-accounts')
 @UseGuards(JwtAuthGuard)
@@ -79,6 +80,7 @@ export class BankAccountsController {
   }
 
   @Delete(':id')
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async remove(@Param('id') id: string) {
     return this.bankAccountsService.remove(id);
   }
