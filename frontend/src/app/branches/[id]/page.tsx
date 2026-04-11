@@ -140,6 +140,12 @@ export default function BranchDetailPage() {
   const [statusDropdownAccountId, setStatusDropdownAccountId] = useState<string | null>(null);
   const [statusChanging, setStatusChanging] = useState(false);
 
+  // Date filters
+  const [branchTxDateFrom, setBranchTxDateFrom] = useState('');
+  const [branchTxDateTo, setBranchTxDateTo] = useState('');
+  const [acctTxDateFrom, setAcctTxDateFrom] = useState('');
+  const [acctTxDateTo, setAcctTxDateTo] = useState('');
+
   // For transfer: all branches + accounts
   const [allBranches, setAllBranches] = useState<AllBranch[]>([]);
   const [txTargetBranchId, setTxTargetBranchId] = useState('');
@@ -249,6 +255,8 @@ export default function BranchDetailPage() {
     setSelectedAccount(account);
     setPopupMode('view');
     setShowDeleteConfirm(false);
+    setAcctTxDateFrom('');
+    setAcctTxDateTo('');
     fetchTransactions(account.id);
   };
 
@@ -503,6 +511,26 @@ export default function BranchDetailPage() {
       setStatusDropdownAccountId(null);
     }
   };
+
+  const filterByDate = (txList: Transaction[], dateFrom: string, dateTo: string) => {
+    return txList.filter((tx) => {
+      const txDate = new Date(tx.createdAt);
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        from.setHours(0, 0, 0, 0);
+        if (txDate < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59, 999);
+        if (txDate > to) return false;
+      }
+      return true;
+    });
+  };
+
+  const filteredBranchTx = filterByDate(branchTransactions, branchTxDateFrom, branchTxDateTo);
+  const filteredAcctTx = filterByDate(transactions, acctTxDateFrom, acctTxDateTo);
 
   const getTransferTargetAccounts = () => {
     if (txType === 'TRANSFER') {
@@ -873,16 +901,51 @@ export default function BranchDetailPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex justify-end mb-3">
-                      <button
-                        onClick={() => downloadTransactionsCSV(branchTransactions, `${branch.name.replace(/\s+/g, '_')}_Transactions`)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download CSV
-                      </button>
+                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-slate-400">From:</label>
+                        <input
+                          type="date"
+                          value={branchTxDateFrom}
+                          onChange={(e) => setBranchTxDateFrom(e.target.value)}
+                          className="bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-slate-400">To:</label>
+                        <input
+                          type="date"
+                          value={branchTxDateTo}
+                          onChange={(e) => setBranchTxDateTo(e.target.value)}
+                          className="bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      {(branchTxDateFrom || branchTxDateTo) && (
+                        <button
+                          onClick={() => { setBranchTxDateFrom(''); setBranchTxDateTo(''); }}
+                          className="text-xs text-slate-400 hover:text-white transition-colors underline"
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <div className="ml-auto flex items-center gap-2">
+                        <span className="text-xs text-slate-500">{filteredBranchTx.length} transactions</span>
+                        <button
+                          onClick={() => downloadTransactionsCSV(filteredBranchTx, `${branch.name.replace(/\s+/g, '_')}_Transactions`)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download CSV
+                        </button>
+                      </div>
                     </div>
-                    <TransactionTable txList={branchTransactions} />
+                    {filteredBranchTx.length === 0 ? (
+                      <div className="text-center py-10 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                        <p className="text-slate-500 text-sm">No transactions found for the selected date range</p>
+                      </div>
+                    ) : (
+                      <TransactionTable txList={filteredBranchTx} />
+                    )}
                   </>
                 )}
               </div>
@@ -1043,14 +1106,14 @@ export default function BranchDetailPage() {
 
                       {/* Transaction History */}
                       <div>
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <IndianRupee className="h-4 w-4 text-yellow-400" />
                             <h4 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider">Transaction History</h4>
                           </div>
-                          {transactions.length > 0 && (
+                          {filteredAcctTx.length > 0 && (
                             <button
-                              onClick={() => downloadTransactionsCSV(transactions, `${selectedAccount.fullName.replace(/\s+/g, '_')}_Statement`, selectedAccount.id)}
+                              onClick={() => downloadTransactionsCSV(filteredAcctTx, `${selectedAccount.fullName.replace(/\s+/g, '_')}_Statement`, selectedAccount.id)}
                               className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium"
                             >
                               <Download className="h-3 w-3" />
@@ -1058,6 +1121,37 @@ export default function BranchDetailPage() {
                             </button>
                           )}
                         </div>
+                        {transactions.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs text-slate-500">From:</label>
+                              <input
+                                type="date"
+                                value={acctTxDateFrom}
+                                onChange={(e) => setAcctTxDateFrom(e.target.value)}
+                                className="bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs text-slate-500">To:</label>
+                              <input
+                                type="date"
+                                value={acctTxDateTo}
+                                onChange={(e) => setAcctTxDateTo(e.target.value)}
+                                className="bg-slate-800 border border-slate-600 rounded px-2 py-0.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            {(acctTxDateFrom || acctTxDateTo) && (
+                              <button
+                                onClick={() => { setAcctTxDateFrom(''); setAcctTxDateTo(''); }}
+                                className="text-xs text-slate-400 hover:text-white transition-colors underline"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            <span className="text-xs text-slate-500 ml-auto">{filteredAcctTx.length} of {transactions.length}</span>
+                          </div>
+                        )}
                         {txLoading ? (
                           <div className="flex items-center justify-center py-8">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500" />
@@ -1066,8 +1160,12 @@ export default function BranchDetailPage() {
                           <div className="text-center py-6 bg-slate-800/40 rounded-xl">
                             <p className="text-slate-500 text-sm">No transactions yet</p>
                           </div>
+                        ) : filteredAcctTx.length === 0 ? (
+                          <div className="text-center py-6 bg-slate-800/40 rounded-xl">
+                            <p className="text-slate-500 text-sm">No transactions found for the selected date range</p>
+                          </div>
                         ) : (
-                          <TransactionTable txList={transactions} contextAccountId={selectedAccount.id} />
+                          <TransactionTable txList={filteredAcctTx} contextAccountId={selectedAccount.id} />
                         )}
                       </div>
 
