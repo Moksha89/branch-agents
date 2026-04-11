@@ -35,6 +35,7 @@ model User {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   bankAccounts BankAccount[]
+  transactions Transaction[]
 
   @@map("users")
 }
@@ -56,30 +57,57 @@ model Branch {
 }
 
 model BankAccount {
-  id                  String   @id @default(uuid())
-  fullName            String   @map("full_name")
-  mobileNumber        String   @map("mobile_number")
-  aadharLinkedNumber  String   @map("aadhar_linked_number")
-  bankName            String   @map("bank_name")
-  accountNumber       String   @map("account_number")
-  ifscCode            String   @map("ifsc_code")
-  bankBranch          String   @map("bank_branch")
-  aadharNumber        String   @map("aadhar_number")
-  aadharPhoto         String?  @map("aadhar_photo")
-  panCardNumber       String   @map("pan_card_number")
-  panCardPhoto        String?  @map("pan_card_photo")
-  debitCardNumber     String   @map("debit_card_number")
-  debitCardExpiry     String   @map("debit_card_expiry")
-  debitCardCvv        String   @map("debit_card_cvv")
-  netbankingUsername  String   @map("netbanking_username")
-  netbankingPassword  String   @map("netbanking_password")
-  bankBalance         Float    @default(0) @map("bank_balance")
-  branchId            String   @map("branch_id")
-  branch              Branch   @relation(fields: [branchId], references: [id])
-  createdById         String   @map("created_by_id")
-  createdBy           User     @relation(fields: [createdById], references: [id])
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                  String        @id @default(uuid())
+  fullName            String        @map("full_name")
+  mobileNumber        String        @map("mobile_number")
+  aadharLinkedNumber  String        @map("aadhar_linked_number")
+  bankName            String        @map("bank_name")
+  accountNumber       String        @map("account_number")
+  ifscCode            String        @map("ifsc_code")
+  bankBranch          String        @map("bank_branch")
+  aadharNumber        String        @map("aadhar_number")
+  aadharPhoto         String?       @map("aadhar_photo")
+  panCardNumber       String        @map("pan_card_number")
+  panCardPhoto        String?       @map("pan_card_photo")
+  debitCardNumber     String        @map("debit_card_number")
+  debitCardExpiry     String        @map("debit_card_expiry")
+  debitCardCvv        String        @map("debit_card_cvv")
+  netbankingUsername  String        @map("netbanking_username")
+  netbankingPassword  String        @map("netbanking_password")
+  bankBalance         Float         @default(0) @map("bank_balance")
+  branchId            String        @map("branch_id")
+  branch              Branch        @relation(fields: [branchId], references: [id])
+  createdById         String        @map("created_by_id")
+  createdBy           User          @relation(fields: [createdById], references: [id])
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  transactionsFrom    Transaction[] @relation("FromAccount")
+  transactionsTo      Transaction[] @relation("ToAccount")
 
   @@map("bank_accounts")
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  OUT_TRANSFER
+}
+
+model Transaction {
+  id              String          @id @default(uuid())
+  type            TransactionType
+  amount          Float
+  balanceBefore   Float           @map("balance_before")
+  balanceAfter    Float           @map("balance_after")
+  description     String?
+  fromAccountId   String          @map("from_account_id")
+  fromAccount     BankAccount     @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccountId     String?         @map("to_account_id")
+  toAccount       BankAccount?    @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+  createdById     String          @map("created_by_id")
+  createdBy       User            @relation(fields: [createdById], references: [id])
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  @@map("transactions")
 }

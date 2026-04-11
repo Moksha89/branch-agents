@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Sidebar from '@/components/layout/sidebar';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,10 @@ import {
   Shield,
   Wallet,
   Globe,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  ArrowLeftRight,
+  Send,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -43,6 +47,7 @@ interface BankAccount {
   netbankingUsername: string;
   netbankingPassword: string;
   bankBalance: number;
+  branchId?: string;
   createdAt: string;
   createdBy: { id: string; fullName: string; username: string };
 }
@@ -57,6 +62,29 @@ interface Branch {
   pincode: string | null;
   bankAccounts: BankAccount[];
 }
+
+interface Transaction {
+  id: string;
+  type: 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER';
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  description: string | null;
+  fromAccountId: string;
+  toAccountId: string | null;
+  fromAccount: { id: string; fullName: string; accountNumber: string; bankName: string };
+  toAccount: { id: string; fullName: string; accountNumber: string; bankName: string } | null;
+  createdBy: { id: string; fullName: string; username: string };
+  createdAt: string;
+}
+
+interface AllBranch {
+  id: string;
+  name: string;
+  bankAccounts: { id: string; fullName: string; accountNumber: string }[];
+}
+
+type TxType = 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER';
 
 export default function BranchDetailPage() {
   const router = useRouter();
@@ -76,10 +104,27 @@ export default function BranchDetailPage() {
   // Edit form state
   const [editForm, setEditForm] = useState<Partial<BankAccount>>({});
 
+  // Transaction state
+  const [txModalOpen, setTxModalOpen] = useState(false);
+  const [txType, setTxType] = useState<TxType>('DEPOSIT');
+  const [txAmount, setTxAmount] = useState('');
+  const [txDescription, setTxDescription] = useState('');
+  const [txToAccountId, setTxToAccountId] = useState('');
+  const [txSubmitting, setTxSubmitting] = useState(false);
+  const [txError, setTxError] = useState('');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
+
+  // For transfer: all branches + accounts
+  const [allBranches, setAllBranches] = useState<AllBranch[]>([]);
+  const [txTargetBranchId, setTxTargetBranchId] = useState('');
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-  const fetchBranch = async () => {
-    const token = localStorage.getItem('accessToken');
+  const getToken = () => localStorage.getItem('accessToken');
+
+  const fetchBranch = useCallback(async () => {
+    const token = getToken();
     if (!token) {
       router.push('/login');
       return;
@@ -103,12 +148,46 @@ export default function BranchDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiUrl, branchId, router]);
+
+  const fetchTransactions = useCallback(async (accountId: string) => {
+    const token = getToken();
+    if (!token) return;
+    setTxLoading(true);
+    try {
+      const res = await fetch(`${apiUrl}/transactions/account/${accountId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTransactions(data);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setTxLoading(false);
+    }
+  }, [apiUrl]);
+
+  const fetchAllBranches = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${apiUrl}/branches`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAllBranches(data);
+      }
+    } catch {
+      // silently fail
+    }
+  }, [apiUrl]);
 
   useEffect(() => {
     fetchBranch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchId]);
+  }, [fetchBranch]);
 
   const maskNumber = (num: string) => {
     if (num.length <= 4) return num;
@@ -119,6 +198,7 @@ export default function BranchDetailPage() {
     setSelectedAccount(account);
     setPopupMode('view');
     setShowDeleteConfirm(false);
+    fetchTransactions(account.id);
   };
 
   const openEditPopup = (account: BankAccount) => {
@@ -149,11 +229,83 @@ export default function BranchDetailPage() {
     setPopupMode(null);
     setShowDeleteConfirm(false);
     setEditForm({});
+    setTransactions([]);
+  };
+
+  const openTxModal = (account: BankAccount, type: TxType) => {
+    setSelectedAccount(account);
+    setTxType(type);
+    setTxAmount('');
+    setTxDescription('');
+    setTxToAccountId('');
+    setTxTargetBranchId('');
+    setTxError('');
+    setTxModalOpen(true);
+    if (type === 'TRANSFER' || type === 'OUT_TRANSFER') {
+      fetchAllBranches();
+    }
+  };
+
+  const closeTxModal = () => {
+    setTxModalOpen(false);
+    setTxError('');
+  };
+
+  const handleTransaction = async () => {
+    if (!selectedAccount) return;
+    const token = getToken();
+    if (!token) return;
+    const amount = parseFloat(txAmount);
+    if (!amount || amount <= 0) {
+      setTxError('Please enter a valid amount');
+      return;
+    }
+    if ((txType === 'TRANSFER' || txType === 'OUT_TRANSFER') && !txToAccountId) {
+      setTxError('Please select a destination account');
+      return;
+    }
+
+    setTxSubmitting(true);
+    setTxError('');
+    try {
+      const body: Record<string, unknown> = {
+        type: txType,
+        amount,
+        fromAccountId: selectedAccount.id,
+        description: txDescription || undefined,
+      };
+      if (txToAccountId) {
+        body.toAccountId = txToAccountId;
+      }
+      const res = await fetch(`${apiUrl}/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        closeTxModal();
+        await fetchBranch();
+        // If view popup is open for this account, refresh transactions
+        if (popupMode === 'view' && selectedAccount) {
+          fetchTransactions(selectedAccount.id);
+        }
+      } else {
+        const errData = await res.json();
+        setTxError(errData.message || 'Transaction failed');
+      }
+    } catch {
+      setTxError('Transaction failed');
+    } finally {
+      setTxSubmitting(false);
+    }
   };
 
   const handleSave = async () => {
     if (!selectedAccount) return;
-    const token = localStorage.getItem('accessToken');
+    const token = getToken();
     if (!token) return;
 
     setSaving(true);
@@ -182,7 +334,7 @@ export default function BranchDetailPage() {
 
   const handleDelete = async () => {
     if (!selectedAccount) return;
-    const token = localStorage.getItem('accessToken');
+    const token = getToken();
     if (!token) return;
 
     setDeleting(true);
@@ -200,6 +352,60 @@ export default function BranchDetailPage() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const txTypeLabel = (type: TxType) => {
+    switch (type) {
+      case 'DEPOSIT': return 'Deposit';
+      case 'WITHDRAWAL': return 'Withdrawal';
+      case 'TRANSFER': return 'Internal Transfer';
+      case 'OUT_TRANSFER': return 'Out Transfer';
+    }
+  };
+
+  const txTypeColor = (type: string) => {
+    switch (type) {
+      case 'DEPOSIT': return 'text-green-400';
+      case 'WITHDRAWAL': return 'text-red-400';
+      case 'TRANSFER': return 'text-blue-400';
+      case 'OUT_TRANSFER': return 'text-orange-400';
+      default: return 'text-slate-400';
+    }
+  };
+
+  const txTypeBadge = (type: string) => {
+    switch (type) {
+      case 'DEPOSIT': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'WITHDRAWAL': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'TRANSFER': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      case 'OUT_TRANSFER': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+    }
+  };
+
+  const txTypeShort = (type: string) => {
+    switch (type) {
+      case 'DEPOSIT': return 'D';
+      case 'WITHDRAWAL': return 'W';
+      case 'TRANSFER': return 'T';
+      case 'OUT_TRANSFER': return 'OT';
+      default: return '?';
+    }
+  };
+
+  // Get accounts available for transfer target
+  const getTransferTargetAccounts = () => {
+    if (txType === 'TRANSFER') {
+      // Same branch only, exclude current account
+      return (branch?.bankAccounts || []).filter((a) => a.id !== selectedAccount?.id);
+    }
+    if (txType === 'OUT_TRANSFER') {
+      // Different branch accounts
+      if (!txTargetBranchId) return [];
+      const targetBranch = allBranches.find((b) => b.id === txTargetBranchId);
+      return targetBranch?.bankAccounts || [];
+    }
+    return [];
   };
 
   const DetailRow = ({ label, value }: { label: string; value: string | number | null }) => (
@@ -281,10 +487,12 @@ export default function BranchDetailPage() {
                 {branch.bankAccounts.map((account) => (
                   <div
                     key={account.id}
-                    onClick={() => openViewPopup(account)}
-                    className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-5 hover:border-blue-500/50 hover:bg-slate-800/70 transition-all cursor-pointer"
+                    className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-5 hover:border-blue-500/50 hover:bg-slate-800/70 transition-all"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer"
+                      onClick={() => openViewPopup(account)}
+                    >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                           {account.fullName.charAt(0).toUpperCase()}
@@ -303,30 +511,66 @@ export default function BranchDetailPage() {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-700/30">
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
                         <CreditCard className="h-3.5 w-3.5 text-slate-500" />
                         <span className="text-slate-400">A/C: {maskNumber(account.accountNumber)}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
                         <Landmark className="h-3.5 w-3.5 text-slate-500" />
                         <span className="text-slate-400">IFSC: {account.ifscCode}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
                         <Phone className="h-3.5 w-3.5 text-slate-500" />
                         <span className="text-slate-400">{account.mobileNumber}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
                         <User className="h-3.5 w-3.5 text-slate-500" />
                         <span className="text-slate-400">By: {account.createdBy.fullName}</span>
                       </div>
+                    </div>
+
+                    {/* Transaction Action Buttons */}
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-700/30">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'DEPOSIT'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors text-sm font-medium"
+                        title="Deposit"
+                      >
+                        <ArrowDownCircle className="h-4 w-4" />
+                        D
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'WITHDRAWAL'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium"
+                        title="Withdrawal"
+                      >
+                        <ArrowUpCircle className="h-4 w-4" />
+                        W
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'TRANSFER'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm font-medium"
+                        title="Internal Transfer"
+                      >
+                        <ArrowLeftRight className="h-4 w-4" />
+                        T
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'OUT_TRANSFER'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 transition-colors text-sm font-medium"
+                        title="Out Transfer (Other Branch)"
+                      >
+                        <Send className="h-4 w-4" />
+                        OT
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* ===== POPUP OVERLAY ===== */}
-            {selectedAccount && popupMode && (
+            {/* ===== ACCOUNT DETAIL POPUP ===== */}
+            {selectedAccount && popupMode && !txModalOpen && (
               <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closePopup}>
                 <div
                   className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
@@ -469,6 +713,75 @@ export default function BranchDetailPage() {
                           <DetailRow label="Username" value={selectedAccount.netbankingUsername} />
                           <DetailRow label="Password" value={selectedAccount.netbankingPassword} />
                         </div>
+                      </div>
+
+                      {/* Transaction History */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <IndianRupee className="h-4 w-4 text-yellow-400" />
+                          <h4 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider">Transaction History</h4>
+                        </div>
+                        {txLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500" />
+                          </div>
+                        ) : transactions.length === 0 ? (
+                          <div className="text-center py-6 bg-slate-800/40 rounded-xl">
+                            <p className="text-slate-500 text-sm">No transactions yet</p>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-800/40 rounded-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-slate-700/50">
+                                    <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Type</th>
+                                    <th className="text-right p-3 text-slate-500 font-medium text-xs uppercase">Amount</th>
+                                    <th className="text-right p-3 text-slate-500 font-medium text-xs uppercase">Balance</th>
+                                    <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Description</th>
+                                    <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {transactions.map((tx) => {
+                                    const isCredit =
+                                      tx.type === 'DEPOSIT' ||
+                                      (tx.toAccountId === selectedAccount.id && tx.fromAccountId !== selectedAccount.id);
+                                    return (
+                                      <tr key={tx.id} className="border-b border-slate-700/30 hover:bg-slate-700/20">
+                                        <td className="p-3">
+                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${txTypeBadge(tx.type)}`}>
+                                            {txTypeShort(tx.type)}
+                                          </span>
+                                        </td>
+                                        <td className={`p-3 text-right font-medium ${isCredit ? 'text-green-400' : 'text-red-400'}`}>
+                                          {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                                        </td>
+                                        <td className="p-3 text-right text-slate-300">
+                                          ₹{tx.balanceAfter.toLocaleString('en-IN')}
+                                        </td>
+                                        <td className="p-3 text-slate-400 max-w-[200px] truncate" title={tx.description || ''}>
+                                          {tx.description || '—'}
+                                        </td>
+                                        <td className="p-3 text-slate-500 whitespace-nowrap">
+                                          {new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                                            day: '2-digit',
+                                            month: 'short',
+                                            year: 'numeric',
+                                          })}{' '}
+                                          {new Date(tx.createdAt).toLocaleTimeString('en-IN', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                          })}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Meta */}
@@ -676,6 +989,138 @@ export default function BranchDetailPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* ===== TRANSACTION MODAL ===== */}
+            {txModalOpen && selectedAccount && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeTxModal}>
+                <div
+                  className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Modal Header */}
+                  <div className="border-b border-slate-700 p-5 flex items-center justify-between rounded-t-2xl">
+                    <div>
+                      <h3 className={`text-lg font-semibold ${txTypeColor(txType)}`}>
+                        {txTypeLabel(txType)}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {selectedAccount.fullName} &middot; Balance: ₹{selectedAccount.bankBalance.toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    <button onClick={closeTxModal} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-5 space-y-4">
+                    {txError && (
+                      <div className="p-3 bg-red-950/40 border border-red-800/50 rounded-lg text-red-300 text-sm">
+                        {txError}
+                      </div>
+                    )}
+
+                    <div>
+                      <Label className="text-slate-400 text-xs">Amount (₹)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Enter amount"
+                        value={txAmount}
+                        onChange={(e) => setTxAmount(e.target.value)}
+                        className="bg-slate-800/60 border-slate-700 text-white mt-1 text-lg"
+                        min="0.01"
+                        step="0.01"
+                      />
+                    </div>
+
+                    {/* Transfer: select destination account */}
+                    {txType === 'TRANSFER' && (
+                      <div>
+                        <Label className="text-slate-400 text-xs">Transfer To (Same Branch)</Label>
+                        <select
+                          value={txToAccountId}
+                          onChange={(e) => setTxToAccountId(e.target.value)}
+                          className="w-full mt-1 bg-slate-800/60 border border-slate-700 text-white rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="">Select account...</option>
+                          {getTransferTargetAccounts().map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.fullName} ({maskNumber(a.accountNumber)})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Out Transfer: select branch then account */}
+                    {txType === 'OUT_TRANSFER' && (
+                      <>
+                        <div>
+                          <Label className="text-slate-400 text-xs">Target Branch</Label>
+                          <select
+                            value={txTargetBranchId}
+                            onChange={(e) => { setTxTargetBranchId(e.target.value); setTxToAccountId(''); }}
+                            className="w-full mt-1 bg-slate-800/60 border border-slate-700 text-white rounded-md px-3 py-2 text-sm"
+                          >
+                            <option value="">Select branch...</option>
+                            {allBranches
+                              .filter((b) => b.id !== branchId)
+                              .map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {b.name}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        {txTargetBranchId && (
+                          <div>
+                            <Label className="text-slate-400 text-xs">Transfer To Account</Label>
+                            <select
+                              value={txToAccountId}
+                              onChange={(e) => setTxToAccountId(e.target.value)}
+                              className="w-full mt-1 bg-slate-800/60 border border-slate-700 text-white rounded-md px-3 py-2 text-sm"
+                            >
+                              <option value="">Select account...</option>
+                              {getTransferTargetAccounts().map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {a.fullName} ({maskNumber(a.accountNumber)})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div>
+                      <Label className="text-slate-400 text-xs">Description (Optional)</Label>
+                      <Input
+                        placeholder="Add a note..."
+                        value={txDescription}
+                        onChange={(e) => setTxDescription(e.target.value)}
+                        className="bg-slate-800/60 border-slate-700 text-white mt-1"
+                      />
+                    </div>
+
+                    <Button
+                      onClick={handleTransaction}
+                      disabled={txSubmitting}
+                      className={`w-full text-white ${
+                        txType === 'DEPOSIT'
+                          ? 'bg-green-600 hover:bg-green-700'
+                          : txType === 'WITHDRAWAL'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : txType === 'TRANSFER'
+                          ? 'bg-blue-600 hover:bg-blue-700'
+                          : 'bg-orange-600 hover:bg-orange-700'
+                      }`}
+                    >
+                      {txSubmitting ? 'Processing...' : `Confirm ${txTypeLabel(txType)}`}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

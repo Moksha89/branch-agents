@@ -31,7 +31,13 @@ export class BranchesService {
   async findAll() {
     return this.prisma.branch.findMany({
       where: { isActive: true },
-      include: { _count: { select: { bankAccounts: true } } },
+      include: {
+        _count: { select: { bankAccounts: true } },
+        bankAccounts: {
+          select: { id: true, fullName: true, accountNumber: true },
+          orderBy: { fullName: 'asc' },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
