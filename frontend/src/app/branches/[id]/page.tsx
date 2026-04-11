@@ -26,6 +26,7 @@ import {
   Send,
   ListFilter,
   RefreshCw,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -447,6 +448,38 @@ export default function BranchDetailPage() {
     }
   };
 
+  const downloadTransactionsCSV = (txList: Transaction[], filename: string, contextAccountId?: string) => {
+    const headers = ['Date', 'Type', 'From Account', 'To Account', 'Amount', 'Balance Before', 'Balance After', 'Description', 'Created By'];
+    const rows = txList.map((tx) => {
+      const date = new Date(tx.createdAt);
+      const dateStr = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const isCredit = contextAccountId
+        ? tx.type === 'DEPOSIT' || (tx.toAccountId === contextAccountId && tx.fromAccountId !== contextAccountId)
+        : tx.type === 'DEPOSIT';
+      const typeLabel = tx.type === 'DEPOSIT' ? 'Deposit' : tx.type === 'WITHDRAWAL' ? 'Withdrawal' : tx.type === 'TRANSFER' ? 'Transfer' : 'Out Transfer';
+      const amountStr = (isCredit ? '+' : '-') + tx.amount.toLocaleString('en-IN');
+      return [
+        dateStr,
+        typeLabel,
+        tx.fromAccount.fullName + ' (' + tx.fromAccount.accountNumber + ')',
+        tx.toAccount ? tx.toAccount.fullName + ' (' + tx.toAccount.accountNumber + ')' : '-',
+        amountStr,
+        tx.balanceBefore.toLocaleString('en-IN'),
+        tx.balanceAfter.toLocaleString('en-IN'),
+        tx.description || '-',
+        tx.createdBy.fullName,
+      ];
+    });
+    const csvContent = [headers, ...rows].map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename + '.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleStatusChange = async (account: BankAccount, newStatus: AccountStatus) => {
     const token = getToken();
     if (!token) return;
@@ -839,7 +872,18 @@ export default function BranchDetailPage() {
                     </p>
                   </div>
                 ) : (
-                  <TransactionTable txList={branchTransactions} />
+                  <>
+                    <div className="flex justify-end mb-3">
+                      <button
+                        onClick={() => downloadTransactionsCSV(branchTransactions, `${branch.name.replace(/\s+/g, '_')}_Transactions`)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download CSV
+                      </button>
+                    </div>
+                    <TransactionTable txList={branchTransactions} />
+                  </>
                 )}
               </div>
             )}
@@ -999,9 +1043,20 @@ export default function BranchDetailPage() {
 
                       {/* Transaction History */}
                       <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <IndianRupee className="h-4 w-4 text-yellow-400" />
-                          <h4 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider">Transaction History</h4>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <IndianRupee className="h-4 w-4 text-yellow-400" />
+                            <h4 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider">Transaction History</h4>
+                          </div>
+                          {transactions.length > 0 && (
+                            <button
+                              onClick={() => downloadTransactionsCSV(transactions, `${selectedAccount.fullName.replace(/\s+/g, '_')}_Statement`, selectedAccount.id)}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium"
+                            >
+                              <Download className="h-3 w-3" />
+                              Download
+                            </button>
+                          )}
                         </div>
                         {txLoading ? (
                           <div className="flex items-center justify-center py-8">
