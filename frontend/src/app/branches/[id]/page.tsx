@@ -602,6 +602,27 @@ export default function BranchDetailPage() {
     setShowReportForm(true);
   };
 
+  const handleDownloadReportPNG = async (reportId: string, reportDate: string) => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${apiUrl}/daily-reports/${reportId}/png`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `daily-report-${branch?.name.replace(/\s+/g, '_') || 'branch'}-${reportDate.split('T')[0]}.png`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      // silently fail
+    }
+  };
+
   const handleDeleteReport = async (id: string) => {
     const token = getToken();
     if (!token) return;
@@ -1250,6 +1271,13 @@ export default function BranchDetailPage() {
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => handleDownloadReportPNG(report.id, report.date)}
+                                    className="px-2 py-1 rounded text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors"
+                                    title="Download PNG Report"
+                                  >
+                                    PNG
+                                  </button>
                                   <button
                                     onClick={() => handleEditReport(report)}
                                     className="px-2 py-1 rounded text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors"
