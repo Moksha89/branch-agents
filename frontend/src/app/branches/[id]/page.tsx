@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   User,
   Phone,
-  CreditCard,
   Landmark,
   IndianRupee,
   X,
@@ -701,145 +700,122 @@ export default function BranchDetailPage() {
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {branch.bankAccounts.map((account) => (
-                      <div
-                        key={account.id}
-                        className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-5 hover:border-blue-500/50 hover:bg-slate-800/70 transition-all"
-                      >
-                        <div
-                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer"
-                          onClick={() => openViewPopup(account)}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
-                              {account.fullName.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-white font-medium">{account.fullName}</h4>
-                                <StatusBadge status={account.status} />
-                              </div>
-                              <p className="text-sm text-slate-400">{account.bankName}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <IndianRupee className="h-4 w-4 text-green-400" />
-                            <span className="text-lg font-semibold text-green-400">
-                              {account.bankBalance.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-700/30">
-                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                            <CreditCard className="h-3.5 w-3.5 text-slate-500" />
-                            <span className="text-slate-400">A/C: {maskNumber(account.accountNumber)}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                            <Landmark className="h-3.5 w-3.5 text-slate-500" />
-                            <span className="text-slate-400">IFSC: {account.ifscCode}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                            <Phone className="h-3.5 w-3.5 text-slate-500" />
-                            <span className="text-slate-400">{account.mobileNumber}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                            <User className="h-3.5 w-3.5 text-slate-500" />
-                            <span className="text-slate-400">By: {account.createdBy.fullName}</span>
-                          </div>
-                        </div>
-
-                        {/* Transaction Action Buttons */}
-                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-700/30">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'DEPOSIT'); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors text-sm font-medium"
-                            title="Deposit"
-                          >
-                            <ArrowDownCircle className="h-4 w-4" />
-                            D
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'WITHDRAWAL'); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium"
-                            title="Withdrawal"
-                          >
-                            <ArrowUpCircle className="h-4 w-4" />
-                            W
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'TRANSFER'); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm font-medium"
-                            title="Internal Transfer"
-                          >
-                            <ArrowLeftRight className="h-4 w-4" />
-                            T
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'OUT_TRANSFER'); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 transition-colors text-sm font-medium"
-                            title="Out Transfer (Other Branch)"
-                          >
-                            <Send className="h-4 w-4" />
-                            OT
-                          </button>
-
-                          {/* Status Change Dropdown */}
-                          <div className="relative ml-auto">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setStatusDropdownAccountId(
-                                  statusDropdownAccountId === account.id ? null : account.id
-                                );
-                              }}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-colors text-sm font-medium ${
-                                STATUS_CONFIG[account.status].bg
-                              } ${STATUS_CONFIG[account.status].border} ${STATUS_CONFIG[account.status].color} hover:opacity-80`}
-                              title="Change Status"
+                  <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-slate-800/80 border-b border-slate-600/50">
+                            <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40 w-[30px]">#</th>
+                            <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Name</th>
+                            <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Bank</th>
+                            <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Account #</th>
+                            <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">IFSC</th>
+                            <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Mobile</th>
+                            <th className="text-right px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Balance</th>
+                            <th className="text-center px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Status</th>
+                            <th className="text-center px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {branch.bankAccounts.map((account, idx) => (
+                            <tr
+                              key={account.id}
+                              className={`border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors cursor-pointer ${
+                                idx % 2 === 0 ? 'bg-slate-800/20' : 'bg-slate-800/40'
+                              }`}
+                              onClick={() => openViewPopup(account)}
                             >
-                              <RefreshCw className="h-4 w-4" />
-                              {STATUS_CONFIG[account.status].label}
-                            </button>
-                            {statusDropdownAccountId === account.id && (
-                              <div
-                                className="absolute right-0 bottom-full mb-1 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-30 overflow-hidden"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {(Object.keys(STATUS_CONFIG) as AccountStatus[]).map((s) => {
-                                  const cfg = STATUS_CONFIG[s];
-                                  const isActive = s === account.status;
-                                  return (
-                                    <button
-                                      key={s}
-                                      disabled={isActive || statusChanging}
-                                      onClick={() => handleStatusChange(account, s)}
-                                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
-                                        isActive
-                                          ? 'bg-slate-700/50 cursor-default'
-                                          : 'hover:bg-slate-700/50 cursor-pointer'
-                                      }`}
-                                    >
-                                      <span className={`w-2 h-2 rounded-full ${
-                                        s === 'ACTIVE' ? 'bg-green-400' :
-                                        s === 'DEBIT_FREEZE' ? 'bg-yellow-400' :
-                                        s === 'CREDIT_FREEZE' ? 'bg-orange-400' :
-                                        s === 'CYBER' ? 'bg-red-400' : 'bg-slate-400'
-                                      }`} />
-                                      <span className={isActive ? cfg.color + ' font-medium' : 'text-slate-300'}>
-                                        {cfg.label}
-                                      </span>
-                                      {isActive && <span className="ml-auto text-xs text-slate-500">current</span>}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                              <td className="px-3 py-2 text-slate-500 text-xs border-r border-slate-700/30 text-center">{idx + 1}</td>
+                              <td className="px-3 py-2 border-r border-slate-700/30 whitespace-nowrap">
+                                <span className="text-white font-medium">{account.fullName}</span>
+                              </td>
+                              <td className="px-3 py-2 text-slate-300 border-r border-slate-700/30 whitespace-nowrap">{account.bankName}</td>
+                              <td className="px-3 py-2 text-slate-400 border-r border-slate-700/30 font-mono text-xs whitespace-nowrap">{account.accountNumber}</td>
+                              <td className="px-3 py-2 text-slate-400 border-r border-slate-700/30 font-mono text-xs">{account.ifscCode}</td>
+                              <td className="px-3 py-2 text-slate-400 border-r border-slate-700/30 whitespace-nowrap">{account.mobileNumber}</td>
+                              <td className="px-3 py-2 text-right border-r border-slate-700/30 whitespace-nowrap">
+                                <span className="text-green-400 font-semibold">₹{account.bankBalance.toLocaleString('en-IN')}</span>
+                              </td>
+                              <td className="px-2 py-2 text-center border-r border-slate-700/30 relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setStatusDropdownAccountId(
+                                      statusDropdownAccountId === account.id ? null : account.id
+                                    );
+                                  }}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border cursor-pointer hover:opacity-80 transition-opacity ${
+                                    STATUS_CONFIG[account.status].bg
+                                  } ${STATUS_CONFIG[account.status].color} ${STATUS_CONFIG[account.status].border}`}
+                                  title="Click to change status"
+                                >
+                                  {STATUS_CONFIG[account.status].label}
+                                  <RefreshCw className="h-3 w-3" />
+                                </button>
+                                {statusDropdownAccountId === account.id && (
+                                  <div
+                                    className="absolute right-0 top-full mt-1 w-44 bg-slate-800 border border-slate-600 rounded-lg shadow-2xl z-40 overflow-hidden"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {(Object.keys(STATUS_CONFIG) as AccountStatus[]).map((s) => {
+                                      const cfg = STATUS_CONFIG[s];
+                                      const isCurrent = s === account.status;
+                                      return (
+                                        <button
+                                          key={s}
+                                          disabled={isCurrent || statusChanging}
+                                          onClick={() => handleStatusChange(account, s)}
+                                          className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${
+                                            isCurrent
+                                              ? 'bg-slate-700/50 cursor-default'
+                                              : 'hover:bg-slate-700/50 cursor-pointer'
+                                          }`}
+                                        >
+                                          <span className={`w-1.5 h-1.5 rounded-full ${
+                                            s === 'ACTIVE' ? 'bg-green-400' :
+                                            s === 'DEBIT_FREEZE' ? 'bg-yellow-400' :
+                                            s === 'CREDIT_FREEZE' ? 'bg-orange-400' :
+                                            s === 'CYBER' ? 'bg-red-400' : 'bg-slate-400'
+                                          }`} />
+                                          <span className={isCurrent ? cfg.color + ' font-medium' : 'text-slate-300'}>
+                                            {cfg.label}
+                                          </span>
+                                          {isCurrent && <span className="ml-auto text-slate-500">•</span>}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-2 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openTxModal(account, 'DEPOSIT'); }}
+                                    className="px-1.5 py-1 rounded text-xs font-bold bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors"
+                                    title="Deposit"
+                                  >D</button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openTxModal(account, 'WITHDRAWAL'); }}
+                                    className="px-1.5 py-1 rounded text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors"
+                                    title="Withdrawal"
+                                  >W</button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openTxModal(account, 'TRANSFER'); }}
+                                    className="px-1.5 py-1 rounded text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors"
+                                    title="Internal Transfer"
+                                  >T</button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openTxModal(account, 'OUT_TRANSFER'); }}
+                                    className="px-1.5 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
+                                    title="Out Transfer"
+                                  >OT</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </>
