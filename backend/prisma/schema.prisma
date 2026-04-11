@@ -75,6 +75,7 @@ model BankAccount {
   netbankingUsername  String        @map("netbanking_username")
   netbankingPassword  String        @map("netbanking_password")
   bankBalance         Float         @default(0) @map("bank_balance")
+  status              AccountStatus @default(ACTIVE)
   branchId            String        @map("branch_id")
   branch              Branch        @relation(fields: [branchId], references: [id])
   createdById         String        @map("created_by_id")
@@ -85,6 +86,14 @@ model BankAccount {
   transactionsTo      Transaction[] @relation("ToAccount")
 
   @@map("bank_accounts")
+}
+
+enum AccountStatus {
+  ACTIVE
+  DEBIT_FREEZE
+  CREDIT_FREEZE
+  CYBER
+  CLOSED
 }
 
 enum TransactionType {

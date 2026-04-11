@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { PrismaClient, UserRole, UserStatus, AccountStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -60,6 +60,7 @@ async function main() {
       netbankingUsername: 'ravikumar_sbi',
       netbankingPassword: 'demo1234',
       bankBalance: 125000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 0,
     },
     {
@@ -78,6 +79,7 @@ async function main() {
       netbankingUsername: 'priyasharma_hdfc',
       netbankingPassword: 'demo5678',
       bankBalance: 87500,
+      status: AccountStatus.ACTIVE,
       branchIndex: 0,
     },
     {
@@ -96,6 +98,7 @@ async function main() {
       netbankingUsername: 'vikramsingh_kotak',
       netbankingPassword: 'demo6789',
       bankBalance: 320000,
+      status: AccountStatus.DEBIT_FREEZE,
       branchIndex: 0,
     },
     {
@@ -114,6 +117,7 @@ async function main() {
       netbankingUsername: 'meenadevi_cnrb',
       netbankingPassword: 'demo3311',
       bankBalance: 67800,
+      status: AccountStatus.ACTIVE,
       branchIndex: 0,
     },
     {
@@ -132,6 +136,7 @@ async function main() {
       netbankingUsername: 'sureshbabu_ib',
       netbankingPassword: 'demo4722',
       bankBalance: 195000,
+      status: AccountStatus.CREDIT_FREEZE,
       branchIndex: 0,
     },
     {
@@ -150,6 +155,7 @@ async function main() {
       netbankingUsername: 'lakshmiprasad_boi',
       netbankingPassword: 'demo5580',
       bankBalance: 42300,
+      status: AccountStatus.ACTIVE,
       branchIndex: 0,
     },
 
@@ -170,6 +176,7 @@ async function main() {
       netbankingUsername: 'amitpatel_icici',
       netbankingPassword: 'demo9012',
       bankBalance: 250000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 1,
     },
     {
@@ -188,6 +195,7 @@ async function main() {
       netbankingUsername: 'deepikajoshi_ubi',
       netbankingPassword: 'demo0123',
       bankBalance: 91500,
+      status: AccountStatus.CYBER,
       branchIndex: 1,
     },
     {
@@ -206,6 +214,7 @@ async function main() {
       netbankingUsername: 'rahuldeshmukh_bom',
       netbankingPassword: 'demo6120',
       bankBalance: 156000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 1,
     },
     {
@@ -224,6 +233,7 @@ async function main() {
       netbankingUsername: 'nehakapoor_yes',
       netbankingPassword: 'demo7430',
       bankBalance: 78900,
+      status: AccountStatus.ACTIVE,
       branchIndex: 1,
     },
     {
@@ -242,6 +252,7 @@ async function main() {
       netbankingUsername: 'sanjaymehta_hdfc',
       netbankingPassword: 'demo8950',
       bankBalance: 430000,
+      status: AccountStatus.DEBIT_FREEZE,
       branchIndex: 1,
     },
     {
@@ -260,6 +271,7 @@ async function main() {
       netbankingUsername: 'poojaiyer_fed',
       netbankingPassword: 'demo2640',
       bankBalance: 55600,
+      status: AccountStatus.ACTIVE,
       branchIndex: 1,
     },
 
@@ -280,6 +292,7 @@ async function main() {
       netbankingUsername: 'rajeshverma_pnb',
       netbankingPassword: 'demo7890',
       bankBalance: 178000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 2,
     },
     {
@@ -298,6 +311,7 @@ async function main() {
       netbankingUsername: 'anitagupta_sbi',
       netbankingPassword: 'demo4170',
       bankBalance: 210000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 2,
     },
     {
@@ -316,6 +330,7 @@ async function main() {
       netbankingUsername: 'mohitchauhan_icici',
       netbankingPassword: 'demo5380',
       bankBalance: 145000,
+      status: AccountStatus.CLOSED,
       branchIndex: 2,
     },
     {
@@ -334,6 +349,7 @@ async function main() {
       netbankingUsername: 'sunitayadav_cbi',
       netbankingPassword: 'demo6290',
       bankBalance: 34500,
+      status: AccountStatus.ACTIVE,
       branchIndex: 2,
     },
     {
@@ -352,6 +368,7 @@ async function main() {
       netbankingUsername: 'aruntiwari_axis',
       netbankingPassword: 'demo7510',
       bankBalance: 289000,
+      status: AccountStatus.CREDIT_FREEZE,
       branchIndex: 2,
     },
 
@@ -372,6 +389,7 @@ async function main() {
       netbankingUsername: 'snehareddy_axis',
       netbankingPassword: 'demo3456',
       bankBalance: 43000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 3,
     },
     {
@@ -390,6 +408,7 @@ async function main() {
       netbankingUsername: 'karthikrao_cnrb',
       netbankingPassword: 'demo8830',
       bankBalance: 167000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 3,
     },
     {
@@ -408,6 +427,7 @@ async function main() {
       netbankingUsername: 'divyahegde_sbi',
       netbankingPassword: 'demo1940',
       bankBalance: 98700,
+      status: AccountStatus.DEBIT_FREEZE,
       branchIndex: 3,
     },
     {
@@ -426,6 +446,7 @@ async function main() {
       netbankingUsername: 'naveengowda_hdfc',
       netbankingPassword: 'demo3060',
       bankBalance: 225000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 3,
     },
     {
@@ -444,6 +465,7 @@ async function main() {
       netbankingUsername: 'rashmikulkarni_kb',
       netbankingPassword: 'demo4720',
       bankBalance: 53200,
+      status: AccountStatus.CYBER,
       branchIndex: 3,
     },
     {
@@ -462,6 +484,7 @@ async function main() {
       netbankingUsername: 'prashanthk_kotak',
       netbankingPassword: 'demo6180',
       bankBalance: 186000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 3,
     },
 
@@ -482,6 +505,7 @@ async function main() {
       netbankingUsername: 'kavithanair_bob',
       netbankingPassword: 'demo2345',
       bankBalance: 56200,
+      status: AccountStatus.ACTIVE,
       branchIndex: 4,
     },
     {
@@ -500,6 +524,7 @@ async function main() {
       netbankingUsername: 'muruganselvam_iob',
       netbankingPassword: 'demo5390',
       bankBalance: 134000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 4,
     },
     {
@@ -518,6 +543,7 @@ async function main() {
       netbankingUsername: 'lakshmiv_icici',
       netbankingPassword: 'demo2710',
       bankBalance: 312000,
+      status: AccountStatus.CLOSED,
       branchIndex: 4,
     },
     {
@@ -536,6 +562,7 @@ async function main() {
       netbankingUsername: 'aravindkrishnan_sbi',
       netbankingPassword: 'demo8430',
       bankBalance: 77500,
+      status: AccountStatus.ACTIVE,
       branchIndex: 4,
     },
     {
@@ -554,6 +581,7 @@ async function main() {
       netbankingUsername: 'revathis_cub',
       netbankingPassword: 'demo3960',
       bankBalance: 28900,
+      status: AccountStatus.CREDIT_FREEZE,
       branchIndex: 4,
     },
     {
@@ -572,12 +600,13 @@ async function main() {
       netbankingUsername: 'dineshram_hdfc',
       netbankingPassword: 'demo5270',
       bankBalance: 198000,
+      status: AccountStatus.ACTIVE,
       branchIndex: 4,
     },
   ];
 
   for (const acc of demoAccounts) {
-    const { branchIndex, ...accountData } = acc;
+    const { branchIndex, status, ...accountData } = acc;
     const existing = await prisma.bankAccount.findFirst({
       where: { accountNumber: accountData.accountNumber },
     });
@@ -585,11 +614,12 @@ async function main() {
       await prisma.bankAccount.create({
         data: {
           ...accountData,
+          status,
           branchId: branches[branchIndex].id,
           createdById: admin.id,
         },
       });
-      console.log('Seeded bank account:', accountData.fullName, '→', branches[branchIndex].name);
+      console.log('Seeded bank account:', accountData.fullName, '→', branches[branchIndex].name, `[${status}]`);
     } else {
       console.log('Bank account already exists:', accountData.fullName);
     }

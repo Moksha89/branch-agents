@@ -24,6 +24,11 @@ export class TransactionsController {
     return this.transactionsService.create(dto, req.user.sub);
   }
 
+  @Get('branch/:branchId')
+  async findByBranch(@Param('branchId') branchId: string) {
+    return this.transactionsService.findByBranch(branchId);
+  }
+
   @Get('account/:accountId')
   async findByAccount(@Param('accountId') accountId: string) {
     return this.transactionsService.findByAccount(accountId);

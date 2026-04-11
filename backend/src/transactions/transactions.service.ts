@@ -255,6 +255,34 @@ export class TransactionsService {
     });
   }
 
+  async findByBranch(branchId: string) {
+    // Get all account IDs in this branch
+    const accounts = await this.prisma.bankAccount.findMany({
+      where: { branchId },
+      select: { id: true },
+    });
+    const accountIds = accounts.map((a) => a.id);
+
+    return this.prisma.transaction.findMany({
+      where: {
+        OR: [
+          { fromAccountId: { in: accountIds } },
+          { toAccountId: { in: accountIds } },
+        ],
+      },
+      include: {
+        fromAccount: {
+          select: { id: true, fullName: true, accountNumber: true, bankName: true },
+        },
+        toAccount: {
+          select: { id: true, fullName: true, accountNumber: true, bankName: true },
+        },
+        createdBy: { select: { id: true, fullName: true, username: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findAll() {
     return this.prisma.transaction.findMany({
       include: {

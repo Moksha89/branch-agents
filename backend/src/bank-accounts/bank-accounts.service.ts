@@ -38,6 +38,7 @@ export class BankAccountsService {
         netbankingUsername: dto.netbankingUsername,
         netbankingPassword: dto.netbankingPassword,
         bankBalance: dto.bankBalance || 0,
+        status: dto.status || 'ACTIVE',
         branchId: dto.branchId,
         createdById: userId,
       },
@@ -70,6 +71,7 @@ export class BankAccountsService {
     if (dto.netbankingUsername !== undefined) data.netbankingUsername = dto.netbankingUsername;
     if (dto.netbankingPassword !== undefined) data.netbankingPassword = dto.netbankingPassword;
     if (dto.bankBalance !== undefined) data.bankBalance = dto.bankBalance;
+    if (dto.status !== undefined) data.status = dto.status;
 
     return this.prisma.bankAccount.update({
       where: { id },

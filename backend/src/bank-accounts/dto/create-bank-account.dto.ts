@@ -1,5 +1,13 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export enum AccountStatusDto {
+  ACTIVE = 'ACTIVE',
+  DEBIT_FREEZE = 'DEBIT_FREEZE',
+  CREDIT_FREEZE = 'CREDIT_FREEZE',
+  CYBER = 'CYBER',
+  CLOSED = 'CLOSED',
+}
 
 export class CreateBankAccountDto {
   @IsString()
@@ -66,4 +74,8 @@ export class CreateBankAccountDto {
   @IsString()
   @IsNotEmpty()
   branchId: string;
+
+  @IsEnum(AccountStatusDto)
+  @IsOptional()
+  status?: AccountStatusDto;
 }

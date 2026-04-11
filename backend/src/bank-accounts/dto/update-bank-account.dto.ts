@@ -1,5 +1,6 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { AccountStatusDto } from './create-bank-account.dto';
 
 export class UpdateBankAccountDto {
   @IsString()
@@ -62,4 +63,8 @@ export class UpdateBankAccountDto {
   @Type(() => Number)
   @IsOptional()
   bankBalance?: number;
+
+  @IsEnum(AccountStatusDto)
+  @IsOptional()
+  status?: AccountStatusDto;
 }

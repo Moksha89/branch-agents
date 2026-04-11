@@ -25,8 +25,11 @@ import {
   ArrowUpCircle,
   ArrowLeftRight,
   Send,
+  ListFilter,
 } from 'lucide-react';
 import Link from 'next/link';
+
+type AccountStatus = 'ACTIVE' | 'DEBIT_FREEZE' | 'CREDIT_FREEZE' | 'CYBER' | 'CLOSED';
 
 interface BankAccount {
   id: string;
@@ -47,6 +50,7 @@ interface BankAccount {
   netbankingUsername: string;
   netbankingPassword: string;
   bankBalance: number;
+  status: AccountStatus;
   branchId?: string;
   createdAt: string;
   createdBy: { id: string; fullName: string; username: string };
@@ -85,6 +89,15 @@ interface AllBranch {
 }
 
 type TxType = 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER';
+type TabType = 'accounts' | 'transactions';
+
+const STATUS_CONFIG: Record<AccountStatus, { label: string; color: string; bg: string; border: string }> = {
+  ACTIVE: { label: 'Active', color: 'text-green-400', bg: 'bg-green-500/15', border: 'border-green-500/30' },
+  DEBIT_FREEZE: { label: 'Debit Freeze', color: 'text-yellow-400', bg: 'bg-yellow-500/15', border: 'border-yellow-500/30' },
+  CREDIT_FREEZE: { label: 'Credit Freeze', color: 'text-orange-400', bg: 'bg-orange-500/15', border: 'border-orange-500/30' },
+  CYBER: { label: 'Cyber', color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/30' },
+  CLOSED: { label: 'Closed', color: 'text-slate-400', bg: 'bg-slate-500/15', border: 'border-slate-500/30' },
+};
 
 export default function BranchDetailPage() {
   const router = useRouter();
@@ -93,6 +106,9 @@ export default function BranchDetailPage() {
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabType>('accounts');
 
   // Popup state
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
@@ -114,6 +130,10 @@ export default function BranchDetailPage() {
   const [txError, setTxError] = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [txLoading, setTxLoading] = useState(false);
+
+  // Branch-level transactions
+  const [branchTransactions, setBranchTransactions] = useState<Transaction[]>([]);
+  const [branchTxLoading, setBranchTxLoading] = useState(false);
 
   // For transfer: all branches + accounts
   const [allBranches, setAllBranches] = useState<AllBranch[]>([]);
@@ -169,6 +189,25 @@ export default function BranchDetailPage() {
     }
   }, [apiUrl]);
 
+  const fetchBranchTransactions = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setBranchTxLoading(true);
+    try {
+      const res = await fetch(`${apiUrl}/transactions/branch/${branchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBranchTransactions(data);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setBranchTxLoading(false);
+    }
+  }, [apiUrl, branchId]);
+
   const fetchAllBranches = useCallback(async () => {
     const token = getToken();
     if (!token) return;
@@ -188,6 +227,13 @@ export default function BranchDetailPage() {
   useEffect(() => {
     fetchBranch();
   }, [fetchBranch]);
+
+  // Load branch transactions when switching to transactions tab
+  useEffect(() => {
+    if (activeTab === 'transactions' && branchTransactions.length === 0) {
+      fetchBranchTransactions();
+    }
+  }, [activeTab, branchTransactions.length, fetchBranchTransactions]);
 
   const maskNumber = (num: string) => {
     if (num.length <= 4) return num;
@@ -219,6 +265,7 @@ export default function BranchDetailPage() {
       netbankingUsername: account.netbankingUsername,
       netbankingPassword: account.netbankingPassword,
       bankBalance: account.bankBalance,
+      status: account.status,
     });
     setPopupMode('edit');
     setShowDeleteConfirm(false);
@@ -288,9 +335,12 @@ export default function BranchDetailPage() {
       if (res.ok) {
         closeTxModal();
         await fetchBranch();
-        // If view popup is open for this account, refresh transactions
         if (popupMode === 'view' && selectedAccount) {
           fetchTransactions(selectedAccount.id);
+        }
+        // Refresh branch transactions if on that tab
+        if (activeTab === 'transactions') {
+          fetchBranchTransactions();
         }
       } else {
         const errData = await res.json();
@@ -393,14 +443,11 @@ export default function BranchDetailPage() {
     }
   };
 
-  // Get accounts available for transfer target
   const getTransferTargetAccounts = () => {
     if (txType === 'TRANSFER') {
-      // Same branch only, exclude current account
       return (branch?.bankAccounts || []).filter((a) => a.id !== selectedAccount?.id);
     }
     if (txType === 'OUT_TRANSFER') {
-      // Different branch accounts
       if (!txTargetBranchId) return [];
       const targetBranch = allBranches.find((b) => b.id === txTargetBranchId);
       return targetBranch?.bankAccounts || [];
@@ -408,10 +455,99 @@ export default function BranchDetailPage() {
     return [];
   };
 
+  // Compute balance summary by status
+  const getBalanceSummary = () => {
+    if (!branch) return [];
+    const summary: Record<string, { count: number; total: number }> = {};
+    for (const acc of branch.bankAccounts) {
+      if (!summary[acc.status]) {
+        summary[acc.status] = { count: 0, total: 0 };
+      }
+      summary[acc.status].count++;
+      summary[acc.status].total += acc.bankBalance;
+    }
+    return Object.entries(summary).map(([status, data]) => ({
+      status: status as AccountStatus,
+      ...data,
+    }));
+  };
+
+  const totalBalance = branch?.bankAccounts.reduce((sum, a) => sum + a.bankBalance, 0) || 0;
+
   const DetailRow = ({ label, value }: { label: string; value: string | number | null }) => (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-slate-500 uppercase tracking-wider">{label}</span>
       <span className="text-sm text-slate-200">{value ?? '—'}</span>
+    </div>
+  );
+
+  const StatusBadge = ({ status }: { status: AccountStatus }) => {
+    const config = STATUS_CONFIG[status] || STATUS_CONFIG.ACTIVE;
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${config.bg} ${config.color} ${config.border}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const TransactionTable = ({ txList, contextAccountId }: { txList: Transaction[]; contextAccountId?: string }) => (
+    <div className="bg-slate-800/40 rounded-xl overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-700/50">
+              <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Type</th>
+              <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Account</th>
+              <th className="text-right p-3 text-slate-500 font-medium text-xs uppercase">Amount</th>
+              <th className="text-right p-3 text-slate-500 font-medium text-xs uppercase">Balance</th>
+              <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Description</th>
+              <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {txList.map((tx) => {
+              const isCredit = contextAccountId
+                ? tx.type === 'DEPOSIT' || (tx.toAccountId === contextAccountId && tx.fromAccountId !== contextAccountId)
+                : tx.type === 'DEPOSIT';
+              return (
+                <tr key={tx.id} className="border-b border-slate-700/30 hover:bg-slate-700/20">
+                  <td className="p-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${txTypeBadge(tx.type)}`}>
+                      {txTypeShort(tx.type)}
+                    </span>
+                  </td>
+                  <td className="p-3 text-slate-300 whitespace-nowrap">
+                    {tx.fromAccount.fullName}
+                    {tx.toAccount && (
+                      <span className="text-slate-500"> → {tx.toAccount.fullName}</span>
+                    )}
+                  </td>
+                  <td className={`p-3 text-right font-medium ${isCredit ? 'text-green-400' : 'text-red-400'}`}>
+                    {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                  </td>
+                  <td className="p-3 text-right text-slate-300">
+                    ₹{tx.balanceAfter.toLocaleString('en-IN')}
+                  </td>
+                  <td className="p-3 text-slate-400 max-w-[200px] truncate" title={tx.description || ''}>
+                    {tx.description || '—'}
+                  </td>
+                  <td className="p-3 text-slate-500 whitespace-nowrap">
+                    {new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}{' '}
+                    {new Date(tx.createdAt).toLocaleTimeString('en-IN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 
@@ -443,7 +579,7 @@ export default function BranchDetailPage() {
               <span className="text-white">{branch.name}</span>
             </div>
 
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center">
                   <Building2 className="h-6 w-6 text-blue-400" />
@@ -465,107 +601,188 @@ export default function BranchDetailPage() {
               </Link>
             </div>
 
-            {/* Bank accounts */}
-            {branch.bankAccounts.length === 0 ? (
-              <div className="text-center py-20 rounded-xl bg-slate-800/30 border border-slate-700/50">
-                <Landmark className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-300 mb-2">
-                  No bank accounts yet
-                </h3>
-                <p className="text-slate-500 mb-6">
-                  Add the first bank account to this branch
-                </p>
-                <Link href={`/branches/${branch.id}/accounts/new`}>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Bank Account
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {branch.bankAccounts.map((account) => (
-                  <div
-                    key={account.id}
-                    className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-5 hover:border-blue-500/50 hover:bg-slate-800/70 transition-all"
-                  >
-                    <div
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer"
-                      onClick={() => openViewPopup(account)}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
-                          {account.fullName.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="text-white font-medium">{account.fullName}</h4>
-                          <p className="text-sm text-slate-400">{account.bankName}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <IndianRupee className="h-4 w-4 text-green-400" />
-                        <span className="text-lg font-semibold text-green-400">
-                          {account.bankBalance.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-700/30">
-                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                        <CreditCard className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="text-slate-400">A/C: {maskNumber(account.accountNumber)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                        <Landmark className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="text-slate-400">IFSC: {account.ifscCode}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                        <Phone className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="text-slate-400">{account.mobileNumber}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
-                        <User className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="text-slate-400">By: {account.createdBy.fullName}</span>
-                      </div>
-                    </div>
-
-                    {/* Transaction Action Buttons */}
-                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-700/30">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'DEPOSIT'); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors text-sm font-medium"
-                        title="Deposit"
-                      >
-                        <ArrowDownCircle className="h-4 w-4" />
-                        D
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'WITHDRAWAL'); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium"
-                        title="Withdrawal"
-                      >
-                        <ArrowUpCircle className="h-4 w-4" />
-                        W
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'TRANSFER'); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm font-medium"
-                        title="Internal Transfer"
-                      >
-                        <ArrowLeftRight className="h-4 w-4" />
-                        T
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openTxModal(account, 'OUT_TRANSFER'); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 transition-colors text-sm font-medium"
-                        title="Out Transfer (Other Branch)"
-                      >
-                        <Send className="h-4 w-4" />
-                        OT
-                      </button>
-                    </div>
+            {/* Balance Summary by Status */}
+            {branch.bankAccounts.length > 0 && (
+              <div className="mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {/* Total */}
+                  <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Balance</p>
+                    <p className="text-lg font-bold text-white">₹{totalBalance.toLocaleString('en-IN')}</p>
+                    <p className="text-xs text-slate-400 mt-1">{branch.bankAccounts.length} accounts</p>
                   </div>
-                ))}
+                  {/* Per status */}
+                  {getBalanceSummary().map(({ status, count, total }) => {
+                    const config = STATUS_CONFIG[status];
+                    return (
+                      <div key={status} className={`rounded-xl ${config.bg} border ${config.border} p-4`}>
+                        <p className={`text-xs uppercase tracking-wider mb-1 ${config.color}`}>{config.label}</p>
+                        <p className={`text-lg font-bold ${config.color}`}>₹{total.toLocaleString('en-IN')}</p>
+                        <p className="text-xs text-slate-400 mt-1">{count} account{count !== 1 ? 's' : ''}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tabs */}
+            <div className="flex items-center gap-1 mb-6 bg-slate-800/30 rounded-lg p-1 w-fit">
+              <button
+                onClick={() => setActiveTab('accounts')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'accounts'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <Landmark className="h-4 w-4 inline mr-1.5 -mt-0.5" />
+                Accounts ({branch.bankAccounts.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'transactions'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <ListFilter className="h-4 w-4 inline mr-1.5 -mt-0.5" />
+                Transactions
+              </button>
+            </div>
+
+            {/* ===== ACCOUNTS TAB ===== */}
+            {activeTab === 'accounts' && (
+              <>
+                {branch.bankAccounts.length === 0 ? (
+                  <div className="text-center py-20 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                    <Landmark className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-300 mb-2">
+                      No bank accounts yet
+                    </h3>
+                    <p className="text-slate-500 mb-6">
+                      Add the first bank account to this branch
+                    </p>
+                    <Link href={`/branches/${branch.id}/accounts/new`}>
+                      <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Bank Account
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {branch.bankAccounts.map((account) => (
+                      <div
+                        key={account.id}
+                        className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-5 hover:border-blue-500/50 hover:bg-slate-800/70 transition-all"
+                      >
+                        <div
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer"
+                          onClick={() => openViewPopup(account)}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                              {account.fullName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-white font-medium">{account.fullName}</h4>
+                                <StatusBadge status={account.status} />
+                              </div>
+                              <p className="text-sm text-slate-400">{account.bankName}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <IndianRupee className="h-4 w-4 text-green-400" />
+                            <span className="text-lg font-semibold text-green-400">
+                              {account.bankBalance.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-700/30">
+                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
+                            <CreditCard className="h-3.5 w-3.5 text-slate-500" />
+                            <span className="text-slate-400">A/C: {maskNumber(account.accountNumber)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
+                            <Landmark className="h-3.5 w-3.5 text-slate-500" />
+                            <span className="text-slate-400">IFSC: {account.ifscCode}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
+                            <Phone className="h-3.5 w-3.5 text-slate-500" />
+                            <span className="text-slate-400">{account.mobileNumber}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => openViewPopup(account)}>
+                            <User className="h-3.5 w-3.5 text-slate-500" />
+                            <span className="text-slate-400">By: {account.createdBy.fullName}</span>
+                          </div>
+                        </div>
+
+                        {/* Transaction Action Buttons */}
+                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-700/30">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'DEPOSIT'); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors text-sm font-medium"
+                            title="Deposit"
+                          >
+                            <ArrowDownCircle className="h-4 w-4" />
+                            D
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'WITHDRAWAL'); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium"
+                            title="Withdrawal"
+                          >
+                            <ArrowUpCircle className="h-4 w-4" />
+                            W
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'TRANSFER'); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-colors text-sm font-medium"
+                            title="Internal Transfer"
+                          >
+                            <ArrowLeftRight className="h-4 w-4" />
+                            T
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openTxModal(account, 'OUT_TRANSFER'); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20 transition-colors text-sm font-medium"
+                            title="Out Transfer (Other Branch)"
+                          >
+                            <Send className="h-4 w-4" />
+                            OT
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ===== TRANSACTIONS TAB ===== */}
+            {activeTab === 'transactions' && (
+              <div>
+                {branchTxLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                  </div>
+                ) : branchTransactions.length === 0 ? (
+                  <div className="text-center py-20 rounded-xl bg-slate-800/30 border border-slate-700/50">
+                    <ListFilter className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-300 mb-2">
+                      No transactions yet
+                    </h3>
+                    <p className="text-slate-500">
+                      Transactions will appear here when you make deposits, withdrawals, or transfers
+                    </p>
+                  </div>
+                ) : (
+                  <TransactionTable txList={branchTransactions} />
+                )}
               </div>
             )}
 
@@ -583,9 +800,12 @@ export default function BranchDetailPage() {
                         {selectedAccount.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-white">
-                          {popupMode === 'view' ? selectedAccount.fullName : 'Edit Account'}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold text-white">
+                            {popupMode === 'view' ? selectedAccount.fullName : 'Edit Account'}
+                          </h3>
+                          {popupMode === 'view' && <StatusBadge status={selectedAccount.status} />}
+                        </div>
                         <p className="text-xs text-slate-400">
                           {popupMode === 'view' ? selectedAccount.bankName : selectedAccount.fullName}
                         </p>
@@ -675,6 +895,10 @@ export default function BranchDetailPage() {
                           <DetailRow label="IFSC Code" value={selectedAccount.ifscCode} />
                           <DetailRow label="Bank Branch" value={selectedAccount.bankBranch} />
                           <DetailRow label="Balance" value={`₹ ${selectedAccount.bankBalance.toLocaleString('en-IN')}`} />
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs text-slate-500 uppercase tracking-wider">Status</span>
+                            <StatusBadge status={selectedAccount.status} />
+                          </div>
                         </div>
                       </div>
 
@@ -730,57 +954,7 @@ export default function BranchDetailPage() {
                             <p className="text-slate-500 text-sm">No transactions yet</p>
                           </div>
                         ) : (
-                          <div className="bg-slate-800/40 rounded-xl overflow-hidden">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b border-slate-700/50">
-                                    <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Type</th>
-                                    <th className="text-right p-3 text-slate-500 font-medium text-xs uppercase">Amount</th>
-                                    <th className="text-right p-3 text-slate-500 font-medium text-xs uppercase">Balance</th>
-                                    <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Description</th>
-                                    <th className="text-left p-3 text-slate-500 font-medium text-xs uppercase">Date</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {transactions.map((tx) => {
-                                    const isCredit =
-                                      tx.type === 'DEPOSIT' ||
-                                      (tx.toAccountId === selectedAccount.id && tx.fromAccountId !== selectedAccount.id);
-                                    return (
-                                      <tr key={tx.id} className="border-b border-slate-700/30 hover:bg-slate-700/20">
-                                        <td className="p-3">
-                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${txTypeBadge(tx.type)}`}>
-                                            {txTypeShort(tx.type)}
-                                          </span>
-                                        </td>
-                                        <td className={`p-3 text-right font-medium ${isCredit ? 'text-green-400' : 'text-red-400'}`}>
-                                          {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
-                                        </td>
-                                        <td className="p-3 text-right text-slate-300">
-                                          ₹{tx.balanceAfter.toLocaleString('en-IN')}
-                                        </td>
-                                        <td className="p-3 text-slate-400 max-w-[200px] truncate" title={tx.description || ''}>
-                                          {tx.description || '—'}
-                                        </td>
-                                        <td className="p-3 text-slate-500 whitespace-nowrap">
-                                          {new Date(tx.createdAt).toLocaleDateString('en-IN', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            year: 'numeric',
-                                          })}{' '}
-                                          {new Date(tx.createdAt).toLocaleTimeString('en-IN', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                          })}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
+                          <TransactionTable txList={transactions} contextAccountId={selectedAccount.id} />
                         )}
                       </div>
 
@@ -880,6 +1054,20 @@ export default function BranchDetailPage() {
                               onChange={(e) => setEditForm({ ...editForm, bankBalance: Number(e.target.value) })}
                               className="bg-slate-800/60 border-slate-700 text-white mt-1"
                             />
+                          </div>
+                          <div>
+                            <Label className="text-slate-400 text-xs">Account Status</Label>
+                            <select
+                              value={editForm.status || 'ACTIVE'}
+                              onChange={(e) => setEditForm({ ...editForm, status: e.target.value as AccountStatus })}
+                              className="w-full mt-1 bg-slate-800/60 border border-slate-700 text-white rounded-md px-3 py-2 text-sm"
+                            >
+                              <option value="ACTIVE">Active</option>
+                              <option value="DEBIT_FREEZE">Debit Freeze</option>
+                              <option value="CREDIT_FREEZE">Credit Freeze</option>
+                              <option value="CYBER">Cyber</option>
+                              <option value="CLOSED">Closed</option>
+                            </select>
                           </div>
                         </div>
                       </div>
@@ -1036,7 +1224,6 @@ export default function BranchDetailPage() {
                       />
                     </div>
 
-                    {/* Transfer: select destination account */}
                     {txType === 'TRANSFER' && (
                       <div>
                         <Label className="text-slate-400 text-xs">Transfer To (Same Branch)</Label>
@@ -1055,7 +1242,6 @@ export default function BranchDetailPage() {
                       </div>
                     )}
 
-                    {/* Out Transfer: select branch then account */}
                     {txType === 'OUT_TRANSFER' && (
                       <>
                         <div>
