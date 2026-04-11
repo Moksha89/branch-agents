@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -14,6 +16,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { BankAccountsService } from './bank-accounts.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
+import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('bank-accounts')
@@ -65,6 +68,19 @@ export class BankAccountsController {
         : undefined,
     };
     return this.bankAccountsService.create(dto, req.user.sub, filePaths);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateBankAccountDto,
+  ) {
+    return this.bankAccountsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    return this.bankAccountsService.remove(id);
   }
 
   @Get()
