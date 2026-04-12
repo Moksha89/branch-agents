@@ -218,7 +218,7 @@ export class BankAccountsService {
 
   async checkDuplicate(accountNumber: string) {
     if (!accountNumber || accountNumber.trim().length < 4) {
-      return { duplicates: [] };
+      return { isDuplicate: false, accounts: [] };
     }
     const existing = await this.prisma.bankAccount.findMany({
       where: { accountNumber: { contains: accountNumber.trim(), mode: 'insensitive' } },
@@ -231,6 +231,6 @@ export class BankAccountsService {
       },
       take: 10,
     });
-    return { duplicates: existing };
+    return { isDuplicate: existing.length > 0, accounts: existing };
   }
 }
