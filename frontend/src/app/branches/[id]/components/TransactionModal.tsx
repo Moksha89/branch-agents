@@ -58,7 +58,7 @@ export default function TransactionModal({
               {txTypeLabel(txType)}
             </h3>
             <p className="text-xs text-slate-400">
-              {account.fullName} &middot; Balance: ₹{account.bankBalance.toLocaleString('en-IN')}
+              {account.fullName} &middot; Balance: ₹{Number(account.bankBalance).toLocaleString('en-IN')}
             </p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors">

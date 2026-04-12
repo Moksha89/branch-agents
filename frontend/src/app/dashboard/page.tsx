@@ -308,7 +308,7 @@ export default function DashboardPage() {
                       <td className="py-1.5 pr-2 text-slate-500">{i + 1}</td>
                       <td className="py-1.5 pr-2 text-white">{a.fullName}</td>
                       <td className="py-1.5 pr-2 text-slate-400">{a.branch.name}</td>
-                      <td className="py-1.5 text-right font-mono text-green-400">{formatINR(a.bankBalance)}</td>
+                      <td className="py-1.5 text-right font-mono text-green-400">{formatINR(Number(a.bankBalance))}</td>
                     </tr>
                   ))}
                 </tbody>

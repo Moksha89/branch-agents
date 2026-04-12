@@ -149,7 +149,7 @@ export default function GlobalSearch() {
                     <p className="text-sm text-white truncate">{a.fullName}</p>
                     <p className="text-[10px] text-slate-400">{a.bankName} • {a.accountNumber} • {a.branch.name}</p>
                   </div>
-                  <span className="text-xs font-mono text-green-400">{formatINR(a.bankBalance)}</span>
+                  <span className="text-xs font-mono text-green-400">{formatINR(Number(a.bankBalance))}</span>
                 </button>
               ))}
             </div>

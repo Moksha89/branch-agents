@@ -179,7 +179,7 @@ export default function AccountDetailPopup({
                 <DetailRow label="Account Number" value={account.accountNumber} />
                 <DetailRow label="IFSC Code" value={account.ifscCode} />
                 <DetailRow label="Bank Branch" value={account.bankBranch} />
-                <DetailRow label="Balance" value={`₹ ${account.bankBalance.toLocaleString('en-IN')}`} />
+                <DetailRow label="Balance" value={`₹ ${Number(account.bankBalance).toLocaleString('en-IN')}`} />
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-slate-500 uppercase tracking-wider">Status</span>
                   <StatusBadge status={account.status} />
@@ -380,7 +380,7 @@ export default function AccountDetailPopup({
                 <div>
                   <Label className="text-slate-400 text-xs">Bank Balance</Label>
                   <p className="text-sm text-slate-300 mt-1 px-3 py-2 bg-slate-800/30 border border-slate-700/50 rounded-md">
-                    ₹{((editForm.bankBalance as number) || 0).toLocaleString('en-IN')}
+                    ₹{(Number(editForm.bankBalance) || 0).toLocaleString('en-IN')}
                     <span className="text-slate-500 text-xs ml-2">(use transactions to change)</span>
                   </p>
                 </div>

@@ -198,7 +198,7 @@ export default function AccountsTab({
                   <td className="px-3 py-2 text-slate-400 border-r border-slate-700/30 font-mono text-xs">{account.ifscCode}</td>
                   <td className="px-3 py-2 text-slate-400 border-r border-slate-700/30 whitespace-nowrap">{account.mobileNumber}</td>
                   <td className="px-3 py-2 text-right border-r border-slate-700/30 whitespace-nowrap">
-                    <span className="text-green-400 font-semibold">₹{account.bankBalance.toLocaleString('en-IN')}</span>
+                    <span className="text-green-400 font-semibold">₹{Number(account.bankBalance).toLocaleString('en-IN')}</span>
                   </td>
                   <td className="px-2 py-2 text-center border-r border-slate-700/30 relative">
                     <button

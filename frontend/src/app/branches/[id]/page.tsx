@@ -643,7 +643,7 @@ export default function BranchDetailPage() {
         summary[acc.status] = { count: 0, total: 0 };
       }
       summary[acc.status].count++;
-      summary[acc.status].total += acc.bankBalance;
+      summary[acc.status].total += Number(acc.bankBalance);
     }
     return Object.entries(summary).map(([status, data]) => ({
       status: status as AccountStatus,
@@ -651,7 +651,7 @@ export default function BranchDetailPage() {
     }));
   };
 
-  const totalBalance = branch?.bankAccounts.reduce((sum, a) => sum + a.bankBalance, 0) || 0;
+  const totalBalance = branch?.bankAccounts.reduce((sum, a) => sum + Number(a.bankBalance), 0) || 0;
 
   return (
     <Sidebar>
