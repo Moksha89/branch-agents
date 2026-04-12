@@ -124,6 +124,30 @@ export function maskNumber(num: string): string {
   return '****' + num.slice(-4);
 }
 
+export interface Merchant {
+  id: string;
+  name: string;
+  type: string;
+  merchantId: string | null;
+  mobileNumber: string | null;
+  balance: number;
+  qrCodePhoto: string | null;
+  bankAccountId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountDocument {
+  id: string;
+  name: string;
+  type: string;
+  filePath: string;
+  fileSize: number | null;
+  mimeType: string | null;
+  bankAccountId: string;
+  uploadedAt: string;
+}
+
 export function filterByDate(txList: Transaction[], dateFrom: string, dateTo: string): Transaction[] {
   return txList.filter((tx) => {
     const txDate = new Date(tx.createdAt);

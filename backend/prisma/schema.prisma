@@ -86,11 +86,45 @@ model BankAccount {
   updatedAt           DateTime      @updatedAt @map("updated_at")
   transactionsFrom    Transaction[] @relation("FromAccount")
   transactionsTo      Transaction[] @relation("ToAccount")
+  merchants           Merchant[]
+  documents           Document[]
 
   @@index([branchId])
   @@index([createdById])
   @@index([status])
   @@map("bank_accounts")
+}
+
+model Merchant {
+  id              String      @id @default(uuid())
+  name            String
+  type            String      // e.g. "PhonePe", "Google Pay", "Paytm", "Other"
+  merchantId      String?     @map("merchant_id")
+  mobileNumber    String?     @map("mobile_number")
+  balance         Decimal     @default(0) @db.Decimal(15, 2)
+  qrCodePhoto     String?     @map("qr_code_photo")
+  bankAccountId   String      @map("bank_account_id")
+  bankAccount     BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@index([bankAccountId])
+  @@map("merchants")
+}
+
+model Document {
+  id              String      @id @default(uuid())
+  name            String
+  type            String      // e.g. "ID Proof", "Address Proof", "Bank Statement", "Other"
+  filePath        String      @map("file_path")
+  fileSize        Int?        @map("file_size")
+  mimeType        String?     @map("mime_type")
+  bankAccountId   String      @map("bank_account_id")
+  bankAccount     BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  uploadedAt      DateTime    @default(now()) @map("uploaded_at")
+
+  @@index([bankAccountId])
+  @@map("documents")
 }
 
 enum AccountStatus {

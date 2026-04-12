@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BankAccount, AccountStatus, Transaction, STATUS_CONFIG } from './types';
 import TransactionTable from './TransactionTable';
+import MerchantsSection from './MerchantsSection';
+import DocumentsSection from './DocumentsSection';
 
 interface AccountDetailPopupProps {
   account: BankAccount;
@@ -287,6 +289,16 @@ export default function AccountDetailPopup({
               ) : (
                 <TransactionTable txList={filteredTransactions} contextAccountId={account.id} />
               )}
+            </div>
+
+            {/* Linked Merchants */}
+            <div className="bg-slate-800/40 rounded-xl p-4">
+              <MerchantsSection accountId={account.id} />
+            </div>
+
+            {/* Documents */}
+            <div className="bg-slate-800/40 rounded-xl p-4">
+              <DocumentsSection accountId={account.id} />
             </div>
 
             {/* Meta */}

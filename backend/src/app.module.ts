@@ -14,6 +14,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { SearchModule } from './search/search.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
+import { MerchantsModule } from './merchants/merchants.module';
+import { DocumentsModule } from './documents/documents.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -29,6 +31,8 @@ import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
     SearchModule,
     NotificationsModule,
     ScheduledTasksModule,
+    MerchantsModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [

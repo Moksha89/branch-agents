@@ -625,10 +625,47 @@ async function main() {
     }
   }
 
+  // Seed demo merchants — 2-3 per account
+  const allAccounts = await prisma.bankAccount.findMany({ select: { id: true, fullName: true } });
+  const merchantTemplates = [
+    { name: 'PhonePe', type: 'PhonePe', balance: 15000 },
+    { name: 'Google Pay', type: 'Google Pay', balance: 8500 },
+    { name: 'Paytm', type: 'Paytm', balance: 12000 },
+    { name: 'Amazon Pay', type: 'Amazon Pay', balance: 5000 },
+    { name: 'CRED', type: 'CRED', balance: 3200 },
+  ];
+
+  let merchantCount = 0;
+  for (let i = 0; i < allAccounts.length; i++) {
+    const acc = allAccounts[i];
+    const numMerchants = (i % 3) + 2; // 2, 3, or 4 merchants per account
+    for (let j = 0; j < numMerchants; j++) {
+      const template = merchantTemplates[(i + j) % merchantTemplates.length];
+      const existing = await prisma.merchant.findFirst({
+        where: { bankAccountId: acc.id, type: template.type },
+      });
+      if (!existing) {
+        await prisma.merchant.create({
+          data: {
+            name: template.name,
+            type: template.type,
+            merchantId: `MID${String(i * 10 + j + 1).padStart(6, '0')}`,
+            mobileNumber: `98${String(10000000 + i * 100 + j).slice(0, 8)}`,
+            balance: template.balance + (i * 500) + (j * 1000),
+            bankAccountId: acc.id,
+          },
+        });
+        merchantCount++;
+        console.log(`  Seeded merchant: ${template.name} → ${acc.fullName}`);
+      }
+    }
+  }
+
   console.log('\nDemo data seeding complete!');
   console.log(`  - 1 admin user`);
   console.log(`  - ${branches.length} branches`);
   console.log(`  - ${demoAccounts.length} bank accounts`);
+  console.log(`  - ${merchantCount} merchants`);
 }
 
 main()
