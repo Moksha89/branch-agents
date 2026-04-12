@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class TransactionsService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private notifications: NotificationsGateway,
   ) {}
 
   // FIX #2: Enforce account status on transactions
@@ -265,6 +267,22 @@ export class TransactionsService {
       toAccountId: dto.toAccountId || null,
     });
 
+    // Feature 5: Real-time notification
+    try {
+      const fromAcct = await this.prisma.bankAccount.findUnique({
+        where: { id: dto.fromAccountId },
+        include: { branch: { select: { name: true } } },
+      });
+      if (fromAcct) {
+        this.notifications.notifyTransaction({
+          type: dto.type,
+          amount,
+          accountName: fromAcct.fullName,
+          branchName: fromAcct.branch.name,
+        });
+      }
+    } catch {}
+
     return result;
   }
 
@@ -347,5 +365,161 @@ export class TransactionsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async reverse(transactionId: string, userId: string, reason?: string) {
+    const original = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        fromAccount: { include: { branch: true } },
+        toAccount: { include: { branch: true } },
+      },
+    });
+    if (!original) {
+      throw new NotFoundException('Transaction not found');
+    }
+    if (original.isReversal) {
+      throw new BadRequestException('Cannot reverse a reversal transaction');
+    }
+    // Check if already reversed
+    const existingReversal = await this.prisma.transaction.findFirst({
+      where: { reversedTransactionId: transactionId },
+    });
+    if (existingReversal) {
+      throw new BadRequestException('This transaction has already been reversed');
+    }
+
+    const amount = Number(original.amount);
+    const desc = reason
+      ? `REVERSAL: ${reason} (Original TX: ${transactionId.slice(0, 8)})`
+      : `REVERSAL of transaction ${transactionId.slice(0, 8)}`;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      switch (original.type) {
+        case 'DEPOSIT': {
+          // Reverse deposit = withdrawal from the account
+          const account = await tx.bankAccount.findUnique({ where: { id: original.fromAccountId } });
+          if (!account) throw new NotFoundException('Account not found');
+          const balanceBefore = Number(account.bankBalance);
+          if (balanceBefore < amount) {
+            throw new BadRequestException(`Insufficient balance to reverse. Available: ₹${balanceBefore.toLocaleString('en-IN')}`);
+          }
+          const balanceAfter = balanceBefore - amount;
+          const reversal = await tx.transaction.create({
+            data: {
+              type: 'WITHDRAWAL',
+              amount,
+              balanceBefore,
+              balanceAfter,
+              description: desc,
+              fromAccountId: original.fromAccountId,
+              createdById: userId,
+              isReversal: true,
+              reversedTransactionId: transactionId,
+            },
+            include: {
+              fromAccount: { select: { id: true, fullName: true, accountNumber: true } },
+              createdBy: { select: { id: true, fullName: true, username: true } },
+            },
+          });
+          await tx.bankAccount.update({
+            where: { id: original.fromAccountId },
+            data: { bankBalance: balanceAfter },
+          });
+          return reversal;
+        }
+
+        case 'WITHDRAWAL': {
+          // Reverse withdrawal = deposit to the account
+          const account = await tx.bankAccount.findUnique({ where: { id: original.fromAccountId } });
+          if (!account) throw new NotFoundException('Account not found');
+          const balanceBefore = Number(account.bankBalance);
+          const balanceAfter = balanceBefore + amount;
+          const reversal = await tx.transaction.create({
+            data: {
+              type: 'DEPOSIT',
+              amount,
+              balanceBefore,
+              balanceAfter,
+              description: desc,
+              fromAccountId: original.fromAccountId,
+              createdById: userId,
+              isReversal: true,
+              reversedTransactionId: transactionId,
+            },
+            include: {
+              fromAccount: { select: { id: true, fullName: true, accountNumber: true } },
+              createdBy: { select: { id: true, fullName: true, username: true } },
+            },
+          });
+          await tx.bankAccount.update({
+            where: { id: original.fromAccountId },
+            data: { bankBalance: balanceAfter },
+          });
+          return reversal;
+        }
+
+        case 'TRANSFER':
+        case 'OUT_TRANSFER': {
+          // Reverse transfer: move money back from toAccount to fromAccount
+          if (!original.toAccountId) {
+            throw new BadRequestException('Cannot reverse: destination account missing');
+          }
+          const fromAcct = await tx.bankAccount.findUnique({ where: { id: original.fromAccountId } });
+          const toAcct = await tx.bankAccount.findUnique({ where: { id: original.toAccountId } });
+          if (!fromAcct || !toAcct) throw new NotFoundException('Account(s) not found');
+
+          const toBalanceBefore = Number(toAcct.bankBalance);
+          if (toBalanceBefore < amount) {
+            throw new BadRequestException(`Insufficient balance in destination to reverse. Available: ₹${toBalanceBefore.toLocaleString('en-IN')}`);
+          }
+          const toBalanceAfter = toBalanceBefore - amount;
+          const fromBalanceBefore = Number(fromAcct.bankBalance);
+          const fromBalanceAfter = fromBalanceBefore + amount;
+
+          // Create reversal for the sender (gets money back)
+          const reversal = await tx.transaction.create({
+            data: {
+              type: original.type,
+              amount,
+              balanceBefore: fromBalanceBefore,
+              balanceAfter: fromBalanceAfter,
+              description: desc,
+              fromAccountId: original.toAccountId,
+              toAccountId: original.fromAccountId,
+              createdById: userId,
+              isReversal: true,
+              reversedTransactionId: transactionId,
+            },
+            include: {
+              fromAccount: { select: { id: true, fullName: true, accountNumber: true } },
+              toAccount: { select: { id: true, fullName: true, accountNumber: true } },
+              createdBy: { select: { id: true, fullName: true, username: true } },
+            },
+          });
+
+          await tx.bankAccount.update({
+            where: { id: original.fromAccountId },
+            data: { bankBalance: fromBalanceAfter },
+          });
+          await tx.bankAccount.update({
+            where: { id: original.toAccountId },
+            data: { bankBalance: toBalanceAfter },
+          });
+          return reversal;
+        }
+
+        default:
+          throw new BadRequestException('Unknown transaction type');
+      }
+    }, { isolationLevel: 'Serializable' });
+
+    this.audit.logTransaction('REVERSAL', userId, result.id, {
+      originalTransactionId: transactionId,
+      amount,
+      reason: reason || 'No reason provided',
+    });
+
+    return result;
   }
 }

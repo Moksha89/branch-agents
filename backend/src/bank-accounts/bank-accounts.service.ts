@@ -199,4 +199,38 @@ export class BankAccountsService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async bulkStatusChange(accountIds: string[], status: string) {
+    const validStatuses = ['ACTIVE', 'DEBIT_FREEZE', 'CREDIT_FREEZE', 'CYBER', 'CLOSED'];
+    if (!validStatuses.includes(status)) {
+      throw new BadRequestException(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+    }
+    if (!accountIds || accountIds.length === 0) {
+      throw new BadRequestException('No account IDs provided');
+    }
+
+    const result = await this.prisma.bankAccount.updateMany({
+      where: { id: { in: accountIds } },
+      data: { status: status as 'ACTIVE' | 'DEBIT_FREEZE' | 'CREDIT_FREEZE' | 'CYBER' | 'CLOSED' },
+    });
+    return { updated: result.count, status };
+  }
+
+  async checkDuplicate(accountNumber: string) {
+    if (!accountNumber || accountNumber.trim().length < 4) {
+      return { duplicates: [] };
+    }
+    const existing = await this.prisma.bankAccount.findMany({
+      where: { accountNumber: { contains: accountNumber.trim(), mode: 'insensitive' } },
+      select: {
+        id: true,
+        fullName: true,
+        accountNumber: true,
+        bankName: true,
+        branch: { select: { id: true, name: true } },
+      },
+      take: 10,
+    });
+    return { duplicates: existing };
+  }
 }

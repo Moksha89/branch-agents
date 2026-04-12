@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFiles,
@@ -83,6 +84,19 @@ export class BankAccountsController {
   @Roles('SUPER_ADMIN', 'ADMIN')
   async remove(@Param('id') id: string) {
     return this.bankAccountsService.remove(id);
+  }
+
+  @Post('bulk-status')
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  async bulkStatusChange(
+    @Body() body: { accountIds: string[]; status: string },
+  ) {
+    return this.bankAccountsService.bulkStatusChange(body.accountIds, body.status);
+  }
+
+  @Get('check-duplicate')
+  async checkDuplicate(@Query('accountNumber') accountNumber: string) {
+    return this.bankAccountsService.checkDuplicate(accountNumber);
   }
 
   @Get()

@@ -28,6 +28,11 @@ export class BranchesController {
     return this.branchesService.remove(id);
   }
 
+  @Get('compare/all')
+  async compare() {
+    return this.branchesService.compare();
+  }
+
   @Get()
   async findAll() {
     return this.branchesService.findAll();

@@ -50,6 +50,7 @@ export default function NewBankAccountPage() {
   const [panCardPhoto, setPanCardPhoto] = useState<File | null>(null);
   const [aadharPreview, setAadharPreview] = useState<string | null>(null);
   const [panPreview, setPanPreview] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -93,6 +94,28 @@ export default function NewBankAccountPage() {
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const checkDuplicate = async (accountNumber: string) => {
+    if (!accountNumber || accountNumber.length < 4) {
+      setDuplicateWarning(null);
+      return;
+    }
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${apiUrl}/bank-accounts/check-duplicate?accountNumber=${encodeURIComponent(accountNumber)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.isDuplicate) {
+        const branches = data.accounts.map((a: { fullName: string; branch: { name: string } }) => `${a.fullName} (${a.branch.name})`).join(', ');
+        setDuplicateWarning(`This account number already exists: ${branches}`);
+      } else {
+        setDuplicateWarning(null);
+      }
+    } catch {
+      // silent
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -269,10 +292,16 @@ export default function NewBankAccountPage() {
                   <Input
                     value={form.accountNumber}
                     onChange={(e) => updateField('accountNumber', e.target.value)}
+                    onBlur={(e) => checkDuplicate(e.target.value)}
                     placeholder="Enter account number"
                     required
                     className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                   />
+                  {duplicateWarning && (
+                    <p className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded px-2 py-1">
+                      ⚠ {duplicateWarning}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

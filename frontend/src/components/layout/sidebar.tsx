@@ -7,10 +7,13 @@ import {
   LogOut,
   LayoutDashboard,
   GitBranch,
+  GitCompare,
   Menu,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import GlobalSearch from '@/components/global-search';
+import NotificationBell from '@/components/notification-bell';
 
 interface UserData {
   id: string;
@@ -23,6 +26,7 @@ interface UserData {
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Branches', href: '/branches', icon: GitBranch },
+  { label: 'Compare', href: '/branches/compare', icon: GitCompare },
 ];
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
@@ -88,11 +92,20 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
+          {/* Search (sidebar) */}
+          <div className="px-3 pt-3">
+            <GlobalSearch />
+          </div>
+
           {/* Nav */}
           <nav className="flex-1 px-3 py-4 space-y-1">
             {navItems.map((item) => {
               const isActive =
-                pathname === item.href || pathname.startsWith(item.href + '/');
+                item.href === '/branches/compare'
+                  ? pathname === '/branches/compare'
+                  : item.href === '/branches'
+                    ? pathname === '/branches' || (pathname.startsWith('/branches/') && pathname !== '/branches/compare')
+                    : pathname === item.href || pathname.startsWith(item.href + '/');
               return (
                 <Link
                   key={item.href}
@@ -152,8 +165,16 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
             </button>
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-400 to-blue-600" />
             <span className="text-sm font-semibold text-white">Systematic Web</span>
+            <div className="ml-auto">
+              <NotificationBell />
+            </div>
           </div>
         </header>
+
+        {/* Desktop notification bar */}
+        <div className="hidden lg:flex items-center justify-end px-6 py-2 border-b border-slate-700/30">
+          <NotificationBell />
+        </div>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           {children}

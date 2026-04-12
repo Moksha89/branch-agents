@@ -51,6 +51,15 @@ export class TransactionsController {
     );
   }
 
+  @Post(':id/reverse')
+  async reverse(
+    @Param('id') id: string,
+    @Request() req: { user: { sub: string } },
+    @Body() body: { reason?: string },
+  ) {
+    return this.transactionsService.reverse(id, req.user.sub, body.reason);
+  }
+
   @Get()
   async findAll() {
     return this.transactionsService.findAll();

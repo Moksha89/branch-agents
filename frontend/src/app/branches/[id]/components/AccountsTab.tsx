@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, Landmark, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BankAccount, AccountStatus, TxType, STATUS_CONFIG } from './types';
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface AccountsTabProps {
   branchId: string;
@@ -17,6 +20,7 @@ interface AccountsTabProps {
   onStatusChange: (account: BankAccount, newStatus: AccountStatus) => void;
   onAccountClick: (account: BankAccount) => void;
   onTxOpen: (account: BankAccount, type: TxType) => void;
+  onRefresh?: () => void;
 }
 
 export default function AccountsTab({
@@ -31,7 +35,57 @@ export default function AccountsTab({
   onStatusChange,
   onAccountClick,
   onTxOpen,
+  onRefresh,
 }: AccountsTabProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<AccountStatus | ''>('');
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState('');
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === filteredAccounts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredAccounts.map((a) => a.id)));
+    }
+  };
+
+  const handleBulkStatusChange = async () => {
+    if (!bulkStatus || selectedIds.size === 0) return;
+    setBulkLoading(true);
+    setBulkMessage('');
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API}/api/bank-accounts/bulk-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ accountIds: Array.from(selectedIds), status: bulkStatus }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBulkMessage(`Updated ${data.updated} account(s) to ${STATUS_CONFIG[bulkStatus as AccountStatus]?.label || bulkStatus}`);
+        setSelectedIds(new Set());
+        setBulkStatus('');
+        if (onRefresh) onRefresh();
+      } else {
+        setBulkMessage(data.message || 'Bulk update failed');
+      }
+    } catch {
+      setBulkMessage('Network error');
+    }
+    setBulkLoading(false);
+    setTimeout(() => setBulkMessage(''), 3000);
+  };
+
   if (accounts.length === 0) {
     return (
       <div className="text-center py-20 rounded-xl bg-slate-800/30 border border-slate-700/50">
@@ -50,20 +104,62 @@ export default function AccountsTab({
 
   return (
     <>
-      <div className="mb-3">
+      <div className="flex flex-col sm:flex-row gap-2 mb-3">
         <input
           type="text"
           placeholder="Search by name, bank, account #, or mobile..."
           value={accountSearch}
           onChange={(e) => setAccountSearch(e.target.value)}
-          className="w-full max-w-md px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+          className="flex-1 max-w-md px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
         />
       </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <span className="text-xs text-blue-300 font-medium">{selectedIds.size} selected</span>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value as AccountStatus | '')}
+            className="px-2 py-1 rounded bg-slate-800 border border-slate-600 text-xs text-white"
+          >
+            <option value="">Change status to...</option>
+            {(Object.keys(STATUS_CONFIG) as AccountStatus[]).map((s) => (
+              <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleBulkStatusChange}
+            disabled={!bulkStatus || bulkLoading}
+            className="px-3 py-1 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {bulkLoading ? 'Updating...' : 'Apply'}
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="px-2 py-1 text-xs text-slate-400 hover:text-white"
+          >
+            Clear
+          </button>
+          {bulkMessage && (
+            <span className="text-xs text-green-400 ml-2">{bulkMessage}</span>
+          )}
+        </div>
+      )}
+
       <div className="rounded-xl border border-slate-700/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-slate-800/80 border-b border-slate-600/50">
+                <th className="px-2 py-2.5 border-r border-slate-700/40 w-[30px]">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === filteredAccounts.length && filteredAccounts.length > 0}
+                    onChange={toggleAll}
+                    className="rounded border-slate-500 bg-slate-700"
+                  />
+                </th>
                 <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40 w-[30px]">#</th>
                 <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Name</th>
                 <th className="text-left px-3 py-2.5 text-slate-400 font-semibold text-xs uppercase tracking-wider border-r border-slate-700/40">Bank</th>
@@ -81,9 +177,18 @@ export default function AccountsTab({
                   key={account.id}
                   className={`border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors cursor-pointer ${
                     idx % 2 === 0 ? 'bg-slate-800/20' : 'bg-slate-800/40'
-                  }`}
+                  } ${selectedIds.has(account.id) ? 'bg-blue-500/10' : ''}`}
                   onClick={() => onAccountClick(account)}
                 >
+                  <td className="px-2 py-2 border-r border-slate-700/30 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(account.id)}
+                      onChange={(e) => { e.stopPropagation(); toggleSelect(account.id); }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded border-slate-500 bg-slate-700"
+                    />
+                  </td>
                   <td className="px-3 py-2 text-slate-500 text-xs border-r border-slate-700/30 text-center">{idx + 1}</td>
                   <td className="px-3 py-2 border-r border-slate-700/30 whitespace-nowrap">
                     <span className="text-white font-medium">{account.fullName}</span>

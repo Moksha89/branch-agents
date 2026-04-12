@@ -109,19 +109,21 @@ enum TransactionType {
 }
 
 model Transaction {
-  id              String          @id @default(uuid())
-  type            TransactionType
-  amount          Decimal       @db.Decimal(15, 2)
-  balanceBefore   Decimal       @map("balance_before") @db.Decimal(15, 2)
-  balanceAfter    Decimal       @map("balance_after") @db.Decimal(15, 2)
-  description     String?
-  fromAccountId   String          @map("from_account_id")
-  fromAccount     BankAccount     @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: Cascade)
-  toAccountId     String?         @map("to_account_id")
-  toAccount       BankAccount?    @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
-  createdById     String          @map("created_by_id")
-  createdBy       User            @relation(fields: [createdById], references: [id])
-  createdAt       DateTime        @default(now()) @map("created_at")
+  id                    String          @id @default(uuid())
+  type                  TransactionType
+  amount                Decimal       @db.Decimal(15, 2)
+  balanceBefore         Decimal       @map("balance_before") @db.Decimal(15, 2)
+  balanceAfter          Decimal       @map("balance_after") @db.Decimal(15, 2)
+  description           String?
+  fromAccountId         String          @map("from_account_id")
+  fromAccount           BankAccount     @relation("FromAccount", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccountId           String?         @map("to_account_id")
+  toAccount             BankAccount?    @relation("ToAccount", fields: [toAccountId], references: [id], onDelete: SetNull)
+  createdById           String          @map("created_by_id")
+  createdBy             User            @relation(fields: [createdById], references: [id])
+  isReversal            Boolean         @default(false) @map("is_reversal")
+  reversedTransactionId String?         @map("reversed_transaction_id")
+  createdAt             DateTime        @default(now()) @map("created_at")
 
   @@index([fromAccountId])
   @@index([toAccountId])

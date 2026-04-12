@@ -94,4 +94,62 @@ export class BranchesService {
     }
     return branch;
   }
+
+  async compare() {
+    const branches = await this.prisma.branch.findMany({
+      where: { isActive: true },
+      include: {
+        bankAccounts: {
+          select: { bankBalance: true, status: true },
+        },
+        dailyReports: {
+          orderBy: { date: 'desc' },
+          take: 30,
+          select: {
+            date: true,
+            totalDeposit: true,
+            totalWithdrawal: true,
+            profitLoss: true,
+            playerBalance: true,
+          },
+        },
+      },
+    });
+
+    return branches.map((b) => {
+      const statusBreakdown: Record<string, { count: number; balance: number }> = {};
+      let totalBalance = 0;
+      for (const a of b.bankAccounts) {
+        const bal = Number(a.bankBalance);
+        totalBalance += bal;
+        if (!statusBreakdown[a.status]) {
+          statusBreakdown[a.status] = { count: 0, balance: 0 };
+        }
+        statusBreakdown[a.status].count++;
+        statusBreakdown[a.status].balance += bal;
+      }
+
+      const totalDeposit = b.dailyReports.reduce((s, r) => s + Number(r.totalDeposit), 0);
+      const totalWithdrawal = b.dailyReports.reduce((s, r) => s + Number(r.totalWithdrawal), 0);
+      const totalPL = b.dailyReports.reduce((s, r) => s + Number(r.profitLoss), 0);
+
+      return {
+        id: b.id,
+        name: b.name,
+        accountCount: b.bankAccounts.length,
+        totalBalance,
+        statusBreakdown,
+        totalDeposit,
+        totalWithdrawal,
+        totalPL,
+        dailyReports: b.dailyReports.map((r) => ({
+          date: r.date,
+          totalDeposit: Number(r.totalDeposit),
+          totalWithdrawal: Number(r.totalWithdrawal),
+          profitLoss: Number(r.profitLoss),
+          playerBalance: Number(r.playerBalance),
+        })),
+      };
+    });
+  }
 }
