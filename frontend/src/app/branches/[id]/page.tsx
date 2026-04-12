@@ -714,18 +714,18 @@ export default function BranchDetailPage() {
             {/* Balance Summary by Status */}
             {branch.bankAccounts.length > 0 && (
               <div className="mb-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4 overflow-hidden">
                     <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Total Balance</p>
-                    <p className="text-lg font-bold text-white">₹{totalBalance.toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-bold text-white truncate">₹{totalBalance.toLocaleString('en-IN')}</p>
                     <p className="text-xs text-slate-400 mt-1">{branch.bankAccounts.length} accounts</p>
                   </div>
                   {getBalanceSummary().map(({ status, count, total }) => {
                     const config = STATUS_CONFIG[status];
                     return (
-                      <div key={status} className={`rounded-xl ${config.bg} border ${config.border} p-4`}>
+                      <div key={status} className={`rounded-xl ${config.bg} border ${config.border} p-4 overflow-hidden`}>
                         <p className={`text-xs uppercase tracking-wider mb-1 ${config.color}`}>{config.label}</p>
-                        <p className={`text-lg font-bold ${config.color}`}>₹{total.toLocaleString('en-IN')}</p>
+                        <p className={`text-sm font-bold ${config.color} truncate`}>₹{total.toLocaleString('en-IN')}</p>
                         <p className="text-xs text-slate-400 mt-1">{count} account{count !== 1 ? 's' : ''}</p>
                       </div>
                     );
