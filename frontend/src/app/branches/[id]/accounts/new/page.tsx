@@ -52,7 +52,7 @@ export default function NewBankAccountPage() {
   const [panPreview, setPanPreview] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -63,7 +63,7 @@ export default function NewBankAccountPage() {
 
     const fetchBranch = async () => {
       try {
-        const res = await fetch(`${apiUrl}/branches/${branchId}`, {
+        const res = await fetch(`${apiUrl}/api/branches/${branchId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -103,7 +103,7 @@ export default function NewBankAccountPage() {
     }
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${apiUrl}/bank-accounts/check-duplicate?accountNumber=${encodeURIComponent(accountNumber)}`, {
+      const res = await fetch(`${apiUrl}/api/bank-accounts/check-duplicate?accountNumber=${encodeURIComponent(accountNumber)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -155,7 +155,7 @@ export default function NewBankAccountPage() {
         formData.append('panCardPhoto', panCardPhoto);
       }
 
-      const res = await fetch(`${apiUrl}/bank-accounts`, {
+      const res = await fetch(`${apiUrl}/api/bank-accounts`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

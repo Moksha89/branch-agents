@@ -37,7 +37,7 @@ export default function BranchesPage() {
   const [error, setError] = useState('');
   const [branchName, setBranchName] = useState('');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const getToken = () => {
     const token = localStorage.getItem('accessToken');
@@ -52,7 +52,7 @@ export default function BranchesPage() {
     const token = getToken();
     if (!token) return;
     try {
-      const res = await fetch(`${apiUrl}/branches`, {
+      const res = await fetch(`${API}/api/branches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
@@ -80,7 +80,7 @@ export default function BranchesPage() {
     const token = getToken();
     if (!token) return;
     try {
-      const res = await fetch(`${apiUrl}/branches`, {
+      const res = await fetch(`${API}/api/branches`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -107,7 +107,7 @@ export default function BranchDetailPage() {
   const [allBranches, setAllBranches] = useState<AllBranch[]>([]);
   const [txTargetBranchId, setTxTargetBranchId] = useState('');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   const getToken = () => localStorage.getItem('accessToken');
 
@@ -123,7 +123,7 @@ export default function BranchDetailPage() {
       return;
     }
     try {
-      const res = await fetch(`${apiUrl}/branches/${branchId}`, {
+      const res = await fetch(`${API}/api/branches/${branchId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
@@ -141,14 +141,14 @@ export default function BranchDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl, branchId, router]);
+  }, [API, branchId, router]);
 
   const fetchTransactions = useCallback(async (accountId: string) => {
     const token = getToken();
     if (!token) return;
     setTxLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/transactions/account/${accountId}`, {
+      const res = await fetch(`${API}/api/transactions/account/${accountId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -160,14 +160,14 @@ export default function BranchDetailPage() {
     } finally {
       setTxLoading(false);
     }
-  }, [apiUrl]);
+  }, [API]);
 
   const fetchBranchTransactions = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     setBranchTxLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/transactions/branch/${branchId}`, {
+      const res = await fetch(`${API}/api/transactions/branch/${branchId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -179,13 +179,13 @@ export default function BranchDetailPage() {
     } finally {
       setBranchTxLoading(false);
     }
-  }, [apiUrl, branchId]);
+  }, [API, branchId]);
 
   const fetchAllBranches = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     try {
-      const res = await fetch(`${apiUrl}/branches`, {
+      const res = await fetch(`${API}/api/branches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -195,7 +195,7 @@ export default function BranchDetailPage() {
     } catch {
       showToast('Failed to load branches', 'error');
     }
-  }, [apiUrl]);
+  }, [API]);
 
   useEffect(() => {
     fetchBranch();
@@ -206,7 +206,7 @@ export default function BranchDetailPage() {
     if (!token) return;
     setDailyReportsLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/daily-reports/branch/${branchId}`, {
+      const res = await fetch(`${API}/api/daily-reports/branch/${branchId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -218,7 +218,7 @@ export default function BranchDetailPage() {
     } finally {
       setDailyReportsLoading(false);
     }
-  }, [apiUrl, branchId]);
+  }, [API, branchId]);
 
   // Load branch transactions when switching to transactions tab
   useEffect(() => {
@@ -324,7 +324,7 @@ export default function BranchDetailPage() {
       if (txToAccountId) {
         body.toAccountId = txToAccountId;
       }
-      const res = await fetch(`${apiUrl}/transactions`, {
+      const res = await fetch(`${API}/api/transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ export default function BranchDetailPage() {
     try {
       const { bankBalance, ...editData } = editForm;
       void bankBalance; // intentionally unused
-      const res = await fetch(`${apiUrl}/bank-accounts/${selectedAccount.id}`, {
+      const res = await fetch(`${API}/api/bank-accounts/${selectedAccount.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -393,7 +393,7 @@ export default function BranchDetailPage() {
 
     setDeleting(true);
     try {
-      const res = await fetch(`${apiUrl}/bank-accounts/${selectedAccount.id}`, {
+      const res = await fetch(`${API}/api/bank-accounts/${selectedAccount.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -417,7 +417,7 @@ export default function BranchDetailPage() {
     if (!token) return;
     setStatusChanging(true);
     try {
-      const res = await fetch(`${apiUrl}/bank-accounts/${account.id}`, {
+      const res = await fetch(`${API}/api/bank-accounts/${account.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -490,7 +490,7 @@ export default function BranchDetailPage() {
     setReportError('');
     try {
       if (editingReportId) {
-        const res = await fetch(`${apiUrl}/daily-reports/${editingReportId}`, {
+        const res = await fetch(`${API}/api/daily-reports/${editingReportId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ totalDeposit: deposit, totalWithdrawal: withdrawal, playerBalance: playerBal }),
@@ -501,7 +501,7 @@ export default function BranchDetailPage() {
           return;
         }
       } else {
-        const res = await fetch(`${apiUrl}/daily-reports`, {
+        const res = await fetch(`${API}/api/daily-reports`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ date: reportDate, totalDeposit: deposit, totalWithdrawal: withdrawal, playerBalance: playerBal, branchId }),
@@ -541,7 +541,7 @@ export default function BranchDetailPage() {
     if (!token) return;
     setDownloadingPNG(reportId);
     try {
-      const res = await fetch(`${apiUrl}/daily-reports/${reportId}/png`, {
+      const res = await fetch(`${API}/api/daily-reports/${reportId}/png`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -567,7 +567,7 @@ export default function BranchDetailPage() {
     if (!token) return;
     setDeletingReportId(id);
     try {
-      const res = await fetch(`${apiUrl}/daily-reports/${id}`, {
+      const res = await fetch(`${API}/api/daily-reports/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
