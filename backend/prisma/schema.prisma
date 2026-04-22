@@ -77,6 +77,7 @@ model BankAccount {
   debitCardExpiry     String        @map("debit_card_expiry")
   debitCardCvv        String        @map("debit_card_cvv")
   debitCardPhoto      String?       @map("debit_card_photo")
+  debitCardPhotoBack  String?       @map("debit_card_photo_back")
   netbankingUsername  String        @map("netbanking_username")
   netbankingPassword  String        @map("netbanking_password")
   bankBalance         Decimal       @default(0) @map("bank_balance") @db.Decimal(15, 2)

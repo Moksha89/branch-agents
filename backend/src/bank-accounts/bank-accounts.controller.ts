@@ -36,6 +36,7 @@ export class BankAccountsController {
         { name: 'panCardPhoto', maxCount: 1 },
         { name: 'panCardPhotoBack', maxCount: 1 },
         { name: 'debitCardPhoto', maxCount: 1 },
+        { name: 'debitCardPhotoBack', maxCount: 1 },
         { name: 'otherDocuments', maxCount: 10 },
         { name: 'merchantQrCodes', maxCount: 20 },
       ],
@@ -67,6 +68,7 @@ export class BankAccountsController {
       panCardPhoto?: Express.Multer.File[];
       panCardPhotoBack?: Express.Multer.File[];
       debitCardPhoto?: Express.Multer.File[];
+      debitCardPhotoBack?: Express.Multer.File[];
       otherDocuments?: Express.Multer.File[];
       merchantQrCodes?: Express.Multer.File[];
     },
@@ -87,6 +89,9 @@ export class BankAccountsController {
         : undefined,
       debitCardPhoto: files?.debitCardPhoto?.[0]?.filename
         ? `/uploads/${files.debitCardPhoto[0].filename}`
+        : undefined,
+      debitCardPhotoBack: files?.debitCardPhotoBack?.[0]?.filename
+        ? `/uploads/${files.debitCardPhotoBack[0].filename}`
         : undefined,
     };
 

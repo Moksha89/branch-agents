@@ -17,6 +17,7 @@ export interface BankAccount {
   panCardPhotoBack: string | null;
   debitCardNumber: string;
   debitCardPhoto: string | null;
+  debitCardPhotoBack: string | null;
   debitCardExpiry: string;
   debitCardCvv: string;
   netbankingUsername: string;

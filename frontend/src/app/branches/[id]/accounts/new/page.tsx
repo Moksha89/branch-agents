@@ -70,6 +70,7 @@ export default function NewBankAccountPage() {
   const [panFront, setPanFront] = useState<File | null>(null);
   const [panBack, setPanBack] = useState<File | null>(null);
   const [debitCardPhoto, setDebitCardPhoto] = useState<File | null>(null);
+  const [debitCardPhotoBack, setDebitCardPhotoBack] = useState<File | null>(null);
   const [otherDocuments, setOtherDocuments] = useState<File[]>([]);
 
   // Previews
@@ -78,6 +79,7 @@ export default function NewBankAccountPage() {
   const [panFrontPreview, setPanFrontPreview] = useState<string | null>(null);
   const [panBackPreview, setPanBackPreview] = useState<string | null>(null);
   const [debitCardPhotoPreview, setDebitCardPhotoPreview] = useState<string | null>(null);
+  const [debitCardPhotoBackPreview, setDebitCardPhotoBackPreview] = useState<string | null>(null);
 
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
@@ -213,6 +215,7 @@ export default function NewBankAccountPage() {
       if (panFront) formData.append('panCardPhoto', panFront);
       if (panBack) formData.append('panCardPhotoBack', panBack);
       if (debitCardPhoto) formData.append('debitCardPhoto', debitCardPhoto);
+      if (debitCardPhotoBack) formData.append('debitCardPhotoBack', debitCardPhotoBack);
 
       // Other documents
       for (const doc of otherDocuments) {
@@ -577,13 +580,22 @@ export default function NewBankAccountPage() {
                   />
                 </div>
               </div>
-              <PhotoUploadField
-                id="debit-card-photo"
-                label="Debit Card Photo"
-                file={debitCardPhoto}
-                preview={debitCardPhotoPreview}
-                onChange={(e) => handlePhotoChange(e, setDebitCardPhoto, setDebitCardPhotoPreview)}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <PhotoUploadField
+                  id="debit-card-front"
+                  label="Debit Card Front"
+                  file={debitCardPhoto}
+                  preview={debitCardPhotoPreview}
+                  onChange={(e) => handlePhotoChange(e, setDebitCardPhoto, setDebitCardPhotoPreview)}
+                />
+                <PhotoUploadField
+                  id="debit-card-back"
+                  label="Debit Card Back"
+                  file={debitCardPhotoBack}
+                  preview={debitCardPhotoBackPreview}
+                  onChange={(e) => handlePhotoChange(e, setDebitCardPhotoBack, setDebitCardPhotoBackPreview)}
+                />
+              </div>
             </div>
           </section>
 

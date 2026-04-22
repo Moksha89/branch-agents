@@ -25,6 +25,7 @@ const SAFE_SELECT = {
   debitCardExpiry: false,
   debitCardCvv: false,
   debitCardPhoto: true,
+  debitCardPhotoBack: true,
   netbankingUsername: false,
   netbankingPassword: false,
   bankBalance: true,
@@ -68,6 +69,7 @@ export class BankAccountsService {
       panCardPhoto?: string;
       panCardPhotoBack?: string;
       debitCardPhoto?: string;
+      debitCardPhotoBack?: string;
     },
     otherDocs?: { filename: string; originalname: string; mimetype: string; size: number; path: string }[],
     merchantQrFiles?: { filename: string; path: string }[],
@@ -108,6 +110,7 @@ export class BankAccountsService {
         debitCardExpiry: dto.debitCardExpiry,
         debitCardCvv: dto.debitCardCvv,
         debitCardPhoto: files.debitCardPhoto || null,
+        debitCardPhotoBack: files.debitCardPhotoBack || null,
         netbankingUsername: dto.netbankingUsername,
         netbankingPassword: dto.netbankingPassword,
         bankBalance: dto.bankBalance || 0,
@@ -217,7 +220,7 @@ export class BankAccountsService {
     }
 
     // Clean up uploaded files
-    const photoFields = [account.aadharPhoto, account.aadharPhotoBack, account.panCardPhoto, account.panCardPhotoBack, account.debitCardPhoto];
+    const photoFields = [account.aadharPhoto, account.aadharPhotoBack, account.panCardPhoto, account.panCardPhotoBack, account.debitCardPhoto, account.debitCardPhotoBack];
     for (const photo of photoFields) {
       if (photo) {
         const filePath = join(__dirname, '..', '..', photo);

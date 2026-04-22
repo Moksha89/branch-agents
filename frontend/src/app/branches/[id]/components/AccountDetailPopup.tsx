@@ -245,8 +245,26 @@ export default function AccountDetailPopup({
                 </div>
                 {account.debitCardPhoto && (
                   <div className="pt-2 border-t border-slate-700/30">
-                    <span className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Camera className="h-3 w-3" /> Debit Card Photo</span>
-                    <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`} alt="Debit Card" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`, '_blank')} />
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Front</span>
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`} alt="Debit Card Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`, '_blank')} />
+                      </div>
+                      {account.debitCardPhotoBack && (
+                        <div className="space-y-1">
+                          <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Back</span>
+                          <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`, '_blank')} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!account.debitCardPhoto && account.debitCardPhotoBack && (
+                  <div className="pt-2 border-t border-slate-700/30">
+                    <div className="space-y-1">
+                      <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Back</span>
+                      <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`, '_blank')} />
+                    </div>
                   </div>
                 )}
               </div>
