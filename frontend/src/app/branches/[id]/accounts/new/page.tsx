@@ -17,8 +17,26 @@ import {
   Upload,
   FileCheck,
   Shield,
+  Plus,
+  Trash2,
+  QrCode,
+  Smartphone,
+  FileText,
+  Camera,
 } from 'lucide-react';
 import Link from 'next/link';
+
+interface MerchantEntry {
+  name: string;
+  type: string;
+  merchantId: string;
+  mobileNumber: string;
+  balance: string;
+  qrFile: File | null;
+  qrPreview: string | null;
+}
+
+const MERCHANT_TYPES = ['PhonePe', 'Google Pay', 'Paytm', 'Amazon Pay', 'CRED', 'Freecharge', 'MobiKwik', 'Other'];
 
 export default function NewBankAccountPage() {
   const router = useRouter();
@@ -46,11 +64,25 @@ export default function NewBankAccountPage() {
     bankBalance: '',
   });
 
-  const [aadharPhoto, setAadharPhoto] = useState<File | null>(null);
-  const [panCardPhoto, setPanCardPhoto] = useState<File | null>(null);
-  const [aadharPreview, setAadharPreview] = useState<string | null>(null);
-  const [panPreview, setPanPreview] = useState<string | null>(null);
+  // Document photo states
+  const [aadharFront, setAadharFront] = useState<File | null>(null);
+  const [aadharBack, setAadharBack] = useState<File | null>(null);
+  const [panFront, setPanFront] = useState<File | null>(null);
+  const [panBack, setPanBack] = useState<File | null>(null);
+  const [debitCardPhoto, setDebitCardPhoto] = useState<File | null>(null);
+  const [otherDocuments, setOtherDocuments] = useState<File[]>([]);
+
+  // Previews
+  const [aadharFrontPreview, setAadharFrontPreview] = useState<string | null>(null);
+  const [aadharBackPreview, setAadharBackPreview] = useState<string | null>(null);
+  const [panFrontPreview, setPanFrontPreview] = useState<string | null>(null);
+  const [panBackPreview, setPanBackPreview] = useState<string | null>(null);
+  const [debitCardPhotoPreview, setDebitCardPhotoPreview] = useState<string | null>(null);
+
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+
+  // Merchants
+  const [merchants, setMerchants] = useState<MerchantEntry[]>([]);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -77,19 +109,15 @@ export default function NewBankAccountPage() {
     fetchBranch();
   }, [apiUrl, branchId, router]);
 
-  const handleFileChange = (
+  const handlePhotoChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: 'aadhar' | 'pan',
+    setter: (f: File | null) => void,
+    previewSetter: (s: string | null) => void,
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (type === 'aadhar') {
-      setAadharPhoto(file);
-      setAadharPreview(URL.createObjectURL(file));
-    } else {
-      setPanCardPhoto(file);
-      setPanPreview(URL.createObjectURL(file));
-    }
+    setter(file);
+    previewSetter(URL.createObjectURL(file));
   };
 
   const updateField = (field: string, value: string) => {
@@ -116,6 +144,37 @@ export default function NewBankAccountPage() {
     } catch {
       // silent
     }
+  };
+
+  // Merchant helpers
+  const addMerchant = () => {
+    setMerchants([...merchants, { name: '', type: 'PhonePe', merchantId: '', mobileNumber: '', balance: '', qrFile: null, qrPreview: null }]);
+  };
+
+  const updateMerchant = (idx: number, field: keyof MerchantEntry, value: string) => {
+    setMerchants((prev) => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  };
+
+  const removeMerchant = (idx: number) => {
+    setMerchants((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleMerchantQr = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMerchants((prev) =>
+      prev.map((m, i) => i === idx ? { ...m, qrFile: file, qrPreview: URL.createObjectURL(file) } : m),
+    );
+  };
+
+  const handleOtherDocs = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    setOtherDocuments((prev) => [...prev, ...Array.from(files)]);
+  };
+
+  const removeOtherDoc = (idx: number) => {
+    setOtherDocuments((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,11 +207,37 @@ export default function NewBankAccountPage() {
       formData.append('bankBalance', form.bankBalance || '0');
       formData.append('branchId', branchId);
 
-      if (aadharPhoto) {
-        formData.append('aadharPhoto', aadharPhoto);
+      // Document photos
+      if (aadharFront) formData.append('aadharPhoto', aadharFront);
+      if (aadharBack) formData.append('aadharPhotoBack', aadharBack);
+      if (panFront) formData.append('panCardPhoto', panFront);
+      if (panBack) formData.append('panCardPhotoBack', panBack);
+      if (debitCardPhoto) formData.append('debitCardPhoto', debitCardPhoto);
+
+      // Other documents
+      for (const doc of otherDocuments) {
+        formData.append('otherDocuments', doc);
       }
-      if (panCardPhoto) {
-        formData.append('panCardPhoto', panCardPhoto);
+
+      // Merchants JSON
+      if (merchants.length > 0) {
+        const merchantsJson = merchants
+          .filter((m) => m.name.trim())
+          .map((m) => ({
+            name: m.name.trim(),
+            type: m.type,
+            merchantId: m.merchantId.trim() || undefined,
+            mobileNumber: m.mobileNumber.trim() || undefined,
+            balance: m.balance ? parseFloat(m.balance) : 0,
+          }));
+        formData.append('merchants', JSON.stringify(merchantsJson));
+
+        // Merchant QR code files
+        for (const m of merchants.filter((m) => m.name.trim())) {
+          if (m.qrFile) {
+            formData.append('merchantQrCodes', m.qrFile);
+          }
+        }
       }
 
       const res = await fetch(`${apiUrl}/api/bank-accounts`, {
@@ -176,6 +261,37 @@ export default function NewBankAccountPage() {
       setLoading(false);
     }
   };
+
+  const PhotoUploadField = ({
+    id,
+    label,
+    file,
+    preview,
+    onChange,
+  }: {
+    id: string;
+    label: string;
+    file: File | null;
+    preview: string | null;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  }) => (
+    <div className="space-y-2">
+      <Label className="text-slate-300 text-xs">{label}</Label>
+      <div className="relative">
+        <input type="file" accept="image/*" onChange={onChange} className="hidden" id={id} />
+        <label
+          htmlFor={id}
+          className="flex items-center gap-2 h-10 px-3 rounded-md border border-slate-600 bg-slate-700/50 text-slate-400 cursor-pointer hover:border-blue-500/50 hover:text-slate-300 transition-colors text-sm"
+        >
+          <Camera className="h-4 w-4 text-blue-400" />
+          {file ? file.name : `Upload ${label}`}
+        </label>
+      </div>
+      {preview && (
+        <img src={preview} alt={label} className="h-16 w-auto rounded-md border border-slate-600 mt-1" />
+      )}
+    </div>
+  );
 
   return (
     <Sidebar>
@@ -299,7 +415,7 @@ export default function NewBankAccountPage() {
                   />
                   {duplicateWarning && (
                     <p className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded px-2 py-1">
-                      ⚠ {duplicateWarning}
+                      {duplicateWarning}
                     </p>
                   )}
                 </div>
@@ -343,7 +459,7 @@ export default function NewBankAccountPage() {
             </div>
           </section>
 
-          {/* Identity Documents */}
+          {/* Identity Documents with Photo Uploads */}
           <section className="rounded-xl bg-slate-800/50 border border-slate-700/50 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-700/50 flex items-center gap-3">
               <Shield className="h-5 w-5 text-purple-400" />
@@ -356,43 +472,31 @@ export default function NewBankAccountPage() {
                   <FileCheck className="h-4 w-4 text-orange-400" />
                   Aadhar Card
                 </h4>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Aadhar Number *</Label>
+                  <Input
+                    value={form.aadharNumber}
+                    onChange={(e) => updateField('aadharNumber', e.target.value)}
+                    placeholder="e.g. 1234 5678 9012"
+                    required
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">Aadhar Number *</Label>
-                    <Input
-                      value={form.aadharNumber}
-                      onChange={(e) => updateField('aadharNumber', e.target.value)}
-                      placeholder="e.g. 1234 5678 9012"
-                      required
-                      className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">Aadhar Photo</Label>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileChange(e, 'aadhar')}
-                        className="hidden"
-                        id="aadhar-upload"
-                      />
-                      <label
-                        htmlFor="aadhar-upload"
-                        className="flex items-center gap-2 h-10 px-3 rounded-md border border-slate-600 bg-slate-700/50 text-slate-400 cursor-pointer hover:border-blue-500/50 hover:text-slate-300 transition-colors text-sm"
-                      >
-                        <Upload className="h-4 w-4" />
-                        {aadharPhoto ? aadharPhoto.name : 'Upload Aadhar photo'}
-                      </label>
-                    </div>
-                    {aadharPreview && (
-                      <img
-                        src={aadharPreview}
-                        alt="Aadhar preview"
-                        className="h-20 w-auto rounded-md border border-slate-600 mt-2"
-                      />
-                    )}
-                  </div>
+                  <PhotoUploadField
+                    id="aadhar-front"
+                    label="Aadhar Front"
+                    file={aadharFront}
+                    preview={aadharFrontPreview}
+                    onChange={(e) => handlePhotoChange(e, setAadharFront, setAadharFrontPreview)}
+                  />
+                  <PhotoUploadField
+                    id="aadhar-back"
+                    label="Aadhar Back"
+                    file={aadharBack}
+                    preview={aadharBackPreview}
+                    onChange={(e) => handlePhotoChange(e, setAadharBack, setAadharBackPreview)}
+                  />
                 </div>
               </div>
 
@@ -402,43 +506,31 @@ export default function NewBankAccountPage() {
                   <FileCheck className="h-4 w-4 text-blue-400" />
                   PAN Card
                 </h4>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">PAN Card Number *</Label>
+                  <Input
+                    value={form.panCardNumber}
+                    onChange={(e) => updateField('panCardNumber', e.target.value.toUpperCase())}
+                    placeholder="e.g. ABCDE1234F"
+                    required
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">PAN Card Number *</Label>
-                    <Input
-                      value={form.panCardNumber}
-                      onChange={(e) => updateField('panCardNumber', e.target.value.toUpperCase())}
-                      placeholder="e.g. ABCDE1234F"
-                      required
-                      className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">PAN Card Photo</Label>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileChange(e, 'pan')}
-                        className="hidden"
-                        id="pan-upload"
-                      />
-                      <label
-                        htmlFor="pan-upload"
-                        className="flex items-center gap-2 h-10 px-3 rounded-md border border-slate-600 bg-slate-700/50 text-slate-400 cursor-pointer hover:border-blue-500/50 hover:text-slate-300 transition-colors text-sm"
-                      >
-                        <Upload className="h-4 w-4" />
-                        {panCardPhoto ? panCardPhoto.name : 'Upload PAN card photo'}
-                      </label>
-                    </div>
-                    {panPreview && (
-                      <img
-                        src={panPreview}
-                        alt="PAN preview"
-                        className="h-20 w-auto rounded-md border border-slate-600 mt-2"
-                      />
-                    )}
-                  </div>
+                  <PhotoUploadField
+                    id="pan-front"
+                    label="PAN Front"
+                    file={panFront}
+                    preview={panFrontPreview}
+                    onChange={(e) => handlePhotoChange(e, setPanFront, setPanFrontPreview)}
+                  />
+                  <PhotoUploadField
+                    id="pan-back"
+                    label="PAN Back"
+                    file={panBack}
+                    preview={panBackPreview}
+                    onChange={(e) => handlePhotoChange(e, setPanBack, setPanBackPreview)}
+                  />
                 </div>
               </div>
             </div>
@@ -485,6 +577,13 @@ export default function NewBankAccountPage() {
                   />
                 </div>
               </div>
+              <PhotoUploadField
+                id="debit-card-photo"
+                label="Debit Card Photo"
+                file={debitCardPhoto}
+                preview={debitCardPhotoPreview}
+                onChange={(e) => handlePhotoChange(e, setDebitCardPhoto, setDebitCardPhotoPreview)}
+              />
             </div>
           </section>
 
@@ -518,6 +617,183 @@ export default function NewBankAccountPage() {
                   />
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Linked Merchants */}
+          <section className="rounded-xl bg-slate-800/50 border border-slate-700/50 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-700/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Smartphone className="h-5 w-5 text-violet-400" />
+                <h3 className="text-lg font-semibold text-white">Linked Merchants</h3>
+                <span className="text-xs text-slate-500">({merchants.length})</span>
+              </div>
+              <button
+                type="button"
+                onClick={addMerchant}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/30 text-violet-400 hover:bg-violet-500/20 transition-colors text-xs font-medium"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Merchant
+              </button>
+            </div>
+            <div className="p-6">
+              {merchants.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">
+                  No merchants added yet. Click &quot;Add Merchant&quot; to link PhonePe, Google Pay, Paytm, etc.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {merchants.map((m, idx) => (
+                    <div key={idx} className="p-4 rounded-xl bg-slate-900/50 border border-slate-700/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-300">Merchant #{idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeMerchant(idx)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-slate-400 text-xs">Type *</Label>
+                          <select
+                            value={m.type}
+                            onChange={(e) => updateMerchant(idx, 'type', e.target.value)}
+                            className="w-full h-10 px-3 rounded-md border border-slate-600 bg-slate-700/50 text-white text-sm"
+                          >
+                            {MERCHANT_TYPES.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-slate-400 text-xs">Name *</Label>
+                          <Input
+                            value={m.name}
+                            onChange={(e) => updateMerchant(idx, 'name', e.target.value)}
+                            placeholder="Merchant name"
+                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 h-10"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-slate-400 text-xs">Merchant ID</Label>
+                          <Input
+                            value={m.merchantId}
+                            onChange={(e) => updateMerchant(idx, 'merchantId', e.target.value)}
+                            placeholder="Optional"
+                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 h-10"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-slate-400 text-xs">Mobile Number</Label>
+                          <Input
+                            value={m.mobileNumber}
+                            onChange={(e) => updateMerchant(idx, 'mobileNumber', e.target.value)}
+                            placeholder="Optional"
+                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 h-10"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-slate-400 text-xs">Balance</Label>
+                          <div className="relative">
+                            <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={m.balance}
+                              onChange={(e) => updateMerchant(idx, 'balance', e.target.value)}
+                              placeholder="0.00"
+                              className="pl-9 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 h-10"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-slate-400 text-xs">QR Code Photo</Label>
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleMerchantQr(idx, e)}
+                              className="hidden"
+                              id={`merchant-qr-${idx}`}
+                            />
+                            <label
+                              htmlFor={`merchant-qr-${idx}`}
+                              className="flex items-center gap-2 h-10 px-3 rounded-md border border-slate-600 bg-slate-700/50 text-slate-400 cursor-pointer hover:border-violet-500/50 hover:text-slate-300 transition-colors text-sm"
+                            >
+                              <QrCode className="h-4 w-4 text-violet-400" />
+                              {m.qrFile ? m.qrFile.name : 'Upload QR'}
+                            </label>
+                          </div>
+                          {m.qrPreview && (
+                            <img src={m.qrPreview} alt="QR" className="h-12 w-auto rounded border border-slate-600 mt-1" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Other Documents */}
+          <section className="rounded-xl bg-slate-800/50 border border-slate-700/50 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-700/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-teal-400" />
+                <h3 className="text-lg font-semibold text-white">Other Documents</h3>
+                <span className="text-xs text-slate-500">({otherDocuments.length})</span>
+              </div>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx"
+                  multiple
+                  onChange={handleOtherDocs}
+                  className="hidden"
+                  id="other-docs"
+                />
+                <label
+                  htmlFor="other-docs"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20 transition-colors text-xs font-medium cursor-pointer"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Upload Documents
+                </label>
+              </div>
+            </div>
+            <div className="p-6">
+              {otherDocuments.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">
+                  No additional documents. Use the upload button to add bank statements, agreements, etc.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {otherDocuments.map((doc, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 border border-slate-700/50"
+                    >
+                      <div className="flex items-center gap-2 text-sm text-slate-300 truncate">
+                        <FileText className="h-4 w-4 text-teal-400 flex-shrink-0" />
+                        <span className="truncate">{doc.name}</span>
+                        <span className="text-xs text-slate-500">({(doc.size / 1024).toFixed(1)} KB)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeOtherDoc(idx)}
+                        className="text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 

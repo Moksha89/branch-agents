@@ -78,4 +78,9 @@ export class CreateBankAccountDto {
   @IsEnum(AccountStatusDto)
   @IsOptional()
   status?: AccountStatusDto;
+
+  // JSON string of merchants to create with the account
+  @IsString()
+  @IsOptional()
+  merchants?: string;
 }

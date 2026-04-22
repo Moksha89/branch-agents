@@ -17,11 +17,14 @@ const SAFE_SELECT = {
   bankBranch: true,
   aadharNumber: false,
   aadharPhoto: true,
+  aadharPhotoBack: true,
   panCardNumber: false,
   panCardPhoto: true,
+  panCardPhotoBack: true,
   debitCardNumber: false,
   debitCardExpiry: false,
   debitCardCvv: false,
+  debitCardPhoto: true,
   netbankingUsername: false,
   netbankingPassword: false,
   bankBalance: true,
@@ -59,13 +62,31 @@ export class BankAccountsService {
   async create(
     dto: CreateBankAccountDto,
     userId: string,
-    files: { aadharPhoto?: string; panCardPhoto?: string },
+    files: {
+      aadharPhoto?: string;
+      aadharPhotoBack?: string;
+      panCardPhoto?: string;
+      panCardPhotoBack?: string;
+      debitCardPhoto?: string;
+    },
+    otherDocs?: { filename: string; originalname: string; mimetype: string; size: number; path: string }[],
+    merchantQrFiles?: { filename: string; path: string }[],
   ) {
     const branch = await this.prisma.branch.findUnique({
       where: { id: dto.branchId },
     });
     if (!branch) {
       throw new NotFoundException('Branch not found');
+    }
+
+    // Parse merchants JSON if provided
+    let merchantsData: { name: string; type: string; merchantId?: string; mobileNumber?: string; balance?: number }[] = [];
+    if (dto.merchants) {
+      try {
+        merchantsData = JSON.parse(dto.merchants);
+      } catch {
+        // ignore parse errors
+      }
     }
 
     const account = await this.prisma.bankAccount.create({
@@ -79,11 +100,14 @@ export class BankAccountsService {
         bankBranch: dto.bankBranch,
         aadharNumber: dto.aadharNumber,
         aadharPhoto: files.aadharPhoto || null,
+        aadharPhotoBack: files.aadharPhotoBack || null,
         panCardNumber: dto.panCardNumber,
         panCardPhoto: files.panCardPhoto || null,
+        panCardPhotoBack: files.panCardPhotoBack || null,
         debitCardNumber: dto.debitCardNumber,
         debitCardExpiry: dto.debitCardExpiry,
         debitCardCvv: dto.debitCardCvv,
+        debitCardPhoto: files.debitCardPhoto || null,
         netbankingUsername: dto.netbankingUsername,
         netbankingPassword: dto.netbankingPassword,
         bankBalance: dto.bankBalance || 0,
@@ -96,6 +120,42 @@ export class BankAccountsService {
         createdBy: { select: { id: true, fullName: true, username: true } },
       },
     });
+
+    // Create merchants if provided
+    if (merchantsData.length > 0) {
+      for (let i = 0; i < merchantsData.length; i++) {
+        const m = merchantsData[i];
+        const qrPath = merchantQrFiles && merchantQrFiles[i] ? merchantQrFiles[i].path : null;
+        await this.prisma.merchant.create({
+          data: {
+            name: m.name,
+            type: m.type,
+            merchantId: m.merchantId || null,
+            mobileNumber: m.mobileNumber || null,
+            balance: m.balance || 0,
+            qrCodePhoto: qrPath,
+            bankAccountId: account.id,
+          },
+        });
+      }
+    }
+
+    // Create other documents if provided
+    if (otherDocs && otherDocs.length > 0) {
+      for (const doc of otherDocs) {
+        await this.prisma.document.create({
+          data: {
+            name: doc.originalname,
+            type: 'Other',
+            filePath: doc.path,
+            fileSize: doc.size,
+            mimeType: doc.mimetype,
+            bankAccountId: account.id,
+          },
+        });
+      }
+    }
+
     return maskSensitive(account as unknown as Record<string, unknown>);
   }
 
@@ -157,13 +217,12 @@ export class BankAccountsService {
     }
 
     // Clean up uploaded files
-    if (account.aadharPhoto) {
-      const filePath = join(__dirname, '..', '..', account.aadharPhoto);
-      if (existsSync(filePath)) unlinkSync(filePath);
-    }
-    if (account.panCardPhoto) {
-      const filePath = join(__dirname, '..', '..', account.panCardPhoto);
-      if (existsSync(filePath)) unlinkSync(filePath);
+    const photoFields = [account.aadharPhoto, account.aadharPhotoBack, account.panCardPhoto, account.panCardPhotoBack, account.debitCardPhoto];
+    for (const photo of photoFields) {
+      if (photo) {
+        const filePath = join(__dirname, '..', '..', photo);
+        if (existsSync(filePath)) unlinkSync(filePath);
+      }
     }
 
     await this.prisma.bankAccount.delete({ where: { id } });

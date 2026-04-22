@@ -32,7 +32,12 @@ export class BankAccountsController {
     FileFieldsInterceptor(
       [
         { name: 'aadharPhoto', maxCount: 1 },
+        { name: 'aadharPhotoBack', maxCount: 1 },
         { name: 'panCardPhoto', maxCount: 1 },
+        { name: 'panCardPhotoBack', maxCount: 1 },
+        { name: 'debitCardPhoto', maxCount: 1 },
+        { name: 'otherDocuments', maxCount: 10 },
+        { name: 'merchantQrCodes', maxCount: 20 },
       ],
       {
         storage: diskStorage({
@@ -58,7 +63,12 @@ export class BankAccountsController {
     @UploadedFiles()
     files: {
       aadharPhoto?: Express.Multer.File[];
+      aadharPhotoBack?: Express.Multer.File[];
       panCardPhoto?: Express.Multer.File[];
+      panCardPhotoBack?: Express.Multer.File[];
+      debitCardPhoto?: Express.Multer.File[];
+      otherDocuments?: Express.Multer.File[];
+      merchantQrCodes?: Express.Multer.File[];
     },
     @Request() req: { user: { sub: string } },
   ) {
@@ -66,11 +76,36 @@ export class BankAccountsController {
       aadharPhoto: files?.aadharPhoto?.[0]?.filename
         ? `/uploads/${files.aadharPhoto[0].filename}`
         : undefined,
+      aadharPhotoBack: files?.aadharPhotoBack?.[0]?.filename
+        ? `/uploads/${files.aadharPhotoBack[0].filename}`
+        : undefined,
       panCardPhoto: files?.panCardPhoto?.[0]?.filename
         ? `/uploads/${files.panCardPhoto[0].filename}`
         : undefined,
+      panCardPhotoBack: files?.panCardPhotoBack?.[0]?.filename
+        ? `/uploads/${files.panCardPhotoBack[0].filename}`
+        : undefined,
+      debitCardPhoto: files?.debitCardPhoto?.[0]?.filename
+        ? `/uploads/${files.debitCardPhoto[0].filename}`
+        : undefined,
     };
-    return this.bankAccountsService.create(dto, req.user.sub, filePaths);
+
+    // Build other documents list
+    const otherDocs = (files?.otherDocuments || []).map((f) => ({
+      filename: f.filename,
+      originalname: f.originalname,
+      mimetype: f.mimetype,
+      size: f.size,
+      path: `/uploads/${f.filename}`,
+    }));
+
+    // Build merchant QR code file map (indexed by position)
+    const merchantQrFiles = (files?.merchantQrCodes || []).map((f) => ({
+      filename: f.filename,
+      path: `/uploads/${f.filename}`,
+    }));
+
+    return this.bankAccountsService.create(dto, req.user.sub, filePaths, otherDocs, merchantQrFiles);
   }
 
   @Patch(':id')

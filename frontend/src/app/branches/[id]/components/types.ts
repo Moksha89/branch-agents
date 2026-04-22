@@ -11,9 +11,12 @@ export interface BankAccount {
   bankBranch: string;
   aadharNumber: string;
   aadharPhoto: string | null;
+  aadharPhotoBack: string | null;
   panCardNumber: string;
   panCardPhoto: string | null;
+  panCardPhotoBack: string | null;
   debitCardNumber: string;
+  debitCardPhoto: string | null;
   debitCardExpiry: string;
   debitCardCvv: string;
   netbankingUsername: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download } from 'lucide-react';
+import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -195,9 +195,39 @@ export default function AccountDetailPopup({
                 <Shield className="h-4 w-4 text-purple-400" />
                 <h4 className="text-sm font-semibold text-purple-400 uppercase tracking-wider">Identity Documents</h4>
               </div>
-              <div className="grid grid-cols-2 gap-4 bg-slate-800/40 rounded-xl p-4">
-                <DetailRow label="Aadhar Number" value={account.aadharNumber} />
-                <DetailRow label="PAN Card Number" value={account.panCardNumber} />
+              <div className="bg-slate-800/40 rounded-xl p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <DetailRow label="Aadhar Number" value={account.aadharNumber} />
+                  <DetailRow label="PAN Card Number" value={account.panCardNumber} />
+                </div>
+                {(account.aadharPhoto || account.aadharPhotoBack || account.panCardPhoto || account.panCardPhotoBack) && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-700/30">
+                    {account.aadharPhoto && (
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Aadhar Front</span>
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhoto}`} alt="Aadhar Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhoto}`, '_blank')} />
+                      </div>
+                    )}
+                    {account.aadharPhotoBack && (
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Aadhar Back</span>
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhotoBack}`} alt="Aadhar Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhotoBack}`, '_blank')} />
+                      </div>
+                    )}
+                    {account.panCardPhoto && (
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> PAN Front</span>
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhoto}`} alt="PAN Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhoto}`, '_blank')} />
+                      </div>
+                    )}
+                    {account.panCardPhotoBack && (
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> PAN Back</span>
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhotoBack}`} alt="PAN Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhotoBack}`, '_blank')} />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -207,10 +237,18 @@ export default function AccountDetailPopup({
                 <Wallet className="h-4 w-4 text-orange-400" />
                 <h4 className="text-sm font-semibold text-orange-400 uppercase tracking-wider">Debit Card</h4>
               </div>
-              <div className="grid grid-cols-3 gap-4 bg-slate-800/40 rounded-xl p-4">
-                <DetailRow label="Card Number" value={account.debitCardNumber} />
-                <DetailRow label="Expiry" value={account.debitCardExpiry} />
-                <DetailRow label="CVV" value={account.debitCardCvv} />
+              <div className="bg-slate-800/40 rounded-xl p-4 space-y-3">
+                <div className="grid grid-cols-3 gap-4">
+                  <DetailRow label="Card Number" value={account.debitCardNumber} />
+                  <DetailRow label="Expiry" value={account.debitCardExpiry} />
+                  <DetailRow label="CVV" value={account.debitCardCvv} />
+                </div>
+                {account.debitCardPhoto && (
+                  <div className="pt-2 border-t border-slate-700/30">
+                    <span className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Camera className="h-3 w-3" /> Debit Card Photo</span>
+                    <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`} alt="Debit Card" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`, '_blank')} />
+                  </div>
+                )}
               </div>
             </div>
 
