@@ -107,7 +107,7 @@ export default function UsersPage() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/users`, {
+      const res = await fetch(`${API}/api/users`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (res.status === 403) {
@@ -127,7 +127,7 @@ export default function UsersPage() {
 
   const fetchBranches = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/branches`, {
+      const res = await fetch(`${API}/api/branches`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (!res.ok) return;
@@ -192,7 +192,7 @@ export default function UsersPage() {
     setSaving(true);
     setError('');
     try {
-      const url = editingUser ? `${API}/users/${editingUser.id}` : `${API}/users`;
+      const url = editingUser ? `${API}/api/users/${editingUser.id}` : `${API}/api/users`;
       const method = editingUser ? 'PATCH' : 'POST';
 
       const body: Record<string, unknown> = {
@@ -239,7 +239,7 @@ export default function UsersPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`${API}/users/${id}`, {
+      const res = await fetch(`${API}/api/users/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${getToken()}` },
       });
