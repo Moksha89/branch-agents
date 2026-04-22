@@ -22,7 +22,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const API = process.env.NEXT_PUBLIC_API_URL ?? '';
       const res = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

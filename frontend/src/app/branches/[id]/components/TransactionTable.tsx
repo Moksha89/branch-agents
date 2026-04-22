@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Transaction, txTypeBadge, txTypeShort } from './types';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 interface TransactionTableProps {
   txList: Transaction[];

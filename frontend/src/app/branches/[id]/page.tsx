@@ -107,7 +107,7 @@ export default function BranchDetailPage() {
   const [allBranches, setAllBranches] = useState<AllBranch[]>([]);
   const [txTargetBranchId, setTxTargetBranchId] = useState('');
 
-  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
   const getToken = () => localStorage.getItem('accessToken');
 

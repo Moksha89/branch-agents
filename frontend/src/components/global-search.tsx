@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, X, User, GitBranch, ArrowUpDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 interface SearchResults {
   accounts: {

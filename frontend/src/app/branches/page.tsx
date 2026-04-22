@@ -37,7 +37,7 @@ export default function BranchesPage() {
   const [error, setError] = useState('');
   const [branchName, setBranchName] = useState('');
 
-  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
   const getToken = () => {
     const token = localStorage.getItem('accessToken');

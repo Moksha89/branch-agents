@@ -62,7 +62,7 @@ interface DashboardStats {
   plTrend: { date: string; branch: string; totalDeposit: number; totalWithdrawal: number; profitLoss: number }[];
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: '#22c55e',

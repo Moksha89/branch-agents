@@ -205,25 +205,25 @@ export default function AccountDetailPopup({
                     {account.aadharPhoto && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Aadhar Front</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhoto}`} alt="Aadhar Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhoto}`, '_blank')} />
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhoto}`} alt="Aadhar Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhoto}`, '_blank')} />
                       </div>
                     )}
                     {account.aadharPhotoBack && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Aadhar Back</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhotoBack}`} alt="Aadhar Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.aadharPhotoBack}`, '_blank')} />
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhotoBack}`} alt="Aadhar Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhotoBack}`, '_blank')} />
                       </div>
                     )}
                     {account.panCardPhoto && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> PAN Front</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhoto}`} alt="PAN Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhoto}`, '_blank')} />
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhoto}`} alt="PAN Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhoto}`, '_blank')} />
                       </div>
                     )}
                     {account.panCardPhotoBack && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> PAN Back</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhotoBack}`} alt="PAN Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.panCardPhotoBack}`, '_blank')} />
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhotoBack}`} alt="PAN Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhotoBack}`, '_blank')} />
                       </div>
                     )}
                   </div>
@@ -248,12 +248,12 @@ export default function AccountDetailPopup({
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Front</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`} alt="Debit Card Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhoto}`, '_blank')} />
+                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhoto}`} alt="Debit Card Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhoto}`, '_blank')} />
                       </div>
                       {account.debitCardPhotoBack && (
                         <div className="space-y-1">
                           <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Back</span>
-                          <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`, '_blank')} />
+                          <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`, '_blank')} />
                         </div>
                       )}
                     </div>
@@ -263,7 +263,7 @@ export default function AccountDetailPopup({
                   <div className="pt-2 border-t border-slate-700/30">
                     <div className="space-y-1">
                       <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Back</span>
-                      <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${account.debitCardPhotoBack}`, '_blank')} />
+                      <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`, '_blank')} />
                     </div>
                   </div>
                 )}

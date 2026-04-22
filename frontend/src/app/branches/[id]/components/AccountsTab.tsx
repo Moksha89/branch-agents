@@ -6,7 +6,7 @@ import { Plus, Landmark, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BankAccount, AccountStatus, TxType, STATUS_CONFIG } from './types';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 interface AccountsTabProps {
   branchId: string;

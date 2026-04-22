@@ -86,7 +86,7 @@ export default function NewBankAccountPage() {
   // Merchants
   const [merchants, setMerchants] = useState<MerchantEntry[]>([]);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');

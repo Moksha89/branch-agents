@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, FileText, Download, X, File, Image } from 'lucide-react';
 import { AccountDocument } from './types';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 interface DocumentsSectionProps {
   accountId: string;

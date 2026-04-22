@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Bell, X, TrendingUp, TrendingDown, ArrowUpDown, Shield, Info } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 interface Notification {
   id: string;

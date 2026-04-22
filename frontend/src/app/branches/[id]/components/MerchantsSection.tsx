@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, QrCode, Smartphone, IndianRupee, Pencil, X, Image } from 'lucide-react';
 import { Merchant } from './types';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 interface MerchantsSectionProps {
   accountId: string;
