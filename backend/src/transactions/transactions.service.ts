@@ -315,7 +315,14 @@ export class TransactionsService {
       }),
       this.prisma.transaction.count({ where }),
     ]);
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    // Normalize Decimal fields to plain numbers
+    const normalizedData = data.map((tx) => ({
+      ...tx,
+      amount: Number(tx.amount),
+      balanceBefore: Number(tx.balanceBefore),
+      balanceAfter: Number(tx.balanceAfter),
+    }));
+    return { data: normalizedData, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findByBranch(branchId: string, page = 1, limit = 100) {
@@ -349,7 +356,14 @@ export class TransactionsService {
       }),
       this.prisma.transaction.count({ where }),
     ]);
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    // Normalize Decimal fields to plain numbers
+    const normalizedData = data.map((tx) => ({
+      ...tx,
+      amount: Number(tx.amount),
+      balanceBefore: Number(tx.balanceBefore),
+      balanceAfter: Number(tx.balanceAfter),
+    }));
+    return { data: normalizedData, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findAll() {

@@ -110,12 +110,13 @@ export class BranchesService {
     if (!branch) {
       throw new NotFoundException('Branch not found');
     }
-    // Mask sensitive fields in bank account data
+    // Mask sensitive fields and normalize Decimal fields in bank account data
     return {
       ...branch,
-      bankAccounts: branch.bankAccounts.map((a) =>
-        maskAccountSensitive(a as unknown as Record<string, unknown>),
-      ),
+      bankAccounts: branch.bankAccounts.map((a) => {
+        const masked = maskAccountSensitive(a as unknown as Record<string, unknown>);
+        return { ...masked, bankBalance: Number(a.bankBalance) };
+      }),
     };
   }
 

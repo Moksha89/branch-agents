@@ -4,6 +4,17 @@ import { Prisma } from '@prisma/client';
 import { CreateDailyReportDto } from './dto/create-daily-report.dto';
 import { UpdateDailyReportDto } from './dto/update-daily-report.dto';
 
+// Convert Prisma Decimal fields to plain numbers for JSON serialization
+function normalizeReport(report: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...report,
+    totalDeposit: Number(report.totalDeposit),
+    totalWithdrawal: Number(report.totalWithdrawal),
+    playerBalance: Number(report.playerBalance),
+    profitLoss: Number(report.profitLoss),
+  };
+}
+
 @Injectable()
 export class DailyReportsService {
   constructor(private prisma: PrismaService) {}
@@ -11,7 +22,7 @@ export class DailyReportsService {
   async create(dto: CreateDailyReportDto, userId: string) {
     const profitLoss = dto.totalDeposit - dto.totalWithdrawal;
     try {
-      return await this.prisma.dailyReport.create({
+      const report = await this.prisma.dailyReport.create({
         data: {
           date: new Date(dto.date),
           totalDeposit: dto.totalDeposit,
@@ -25,6 +36,7 @@ export class DailyReportsService {
           createdBy: { select: { id: true, fullName: true, username: true } },
         },
       });
+      return normalizeReport(report as unknown as Record<string, unknown>);
     } catch (error) {
       // FIX #14: Friendly error for duplicate daily report date
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -35,22 +47,25 @@ export class DailyReportsService {
   }
 
   async findByBranch(branchId: string) {
-    return this.prisma.dailyReport.findMany({
+    const reports = await this.prisma.dailyReport.findMany({
       where: { branchId },
       include: {
         createdBy: { select: { id: true, fullName: true, username: true } },
       },
       orderBy: { date: 'desc' },
     });
+    return reports.map((r) => normalizeReport(r as unknown as Record<string, unknown>));
   }
 
   async findOne(id: string) {
-    return this.prisma.dailyReport.findUnique({
+    const report = await this.prisma.dailyReport.findUnique({
       where: { id },
       include: {
         createdBy: { select: { id: true, fullName: true, username: true } },
       },
     });
+    if (!report) return null;
+    return normalizeReport(report as unknown as Record<string, unknown>);
   }
 
   async update(id: string, dto: UpdateDailyReportDto) {
@@ -63,7 +78,7 @@ export class DailyReportsService {
     const totalWithdrawal = dto.totalWithdrawal !== undefined ? dto.totalWithdrawal : Number(existing.totalWithdrawal);
     const profitLoss = totalDeposit - totalWithdrawal;
 
-    return this.prisma.dailyReport.update({
+    const report = await this.prisma.dailyReport.update({
       where: { id },
       data: {
         totalDeposit,
@@ -75,6 +90,7 @@ export class DailyReportsService {
         createdBy: { select: { id: true, fullName: true, username: true } },
       },
     });
+    return normalizeReport(report as unknown as Record<string, unknown>);
   }
 
   async remove(id: string) {

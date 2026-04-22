@@ -135,6 +135,13 @@ export default function BranchDetailPage() {
         return;
       }
       const data = await res.json();
+      // Convert Prisma Decimal bankBalance strings to numbers
+      if (data.bankAccounts) {
+        data.bankAccounts = data.bankAccounts.map((a: BankAccount) => ({
+          ...a,
+          bankBalance: Number(a.bankBalance),
+        }));
+      }
       setBranch(data);
     } catch {
       setError('Failed to load branch');
@@ -153,7 +160,15 @@ export default function BranchDetailPage() {
       });
       if (res.ok) {
         const json = await res.json();
-        setTransactions(json.data || json);
+        const raw = json.data || json;
+        // Convert Prisma Decimal strings to numbers
+        const normalized = (raw as Transaction[]).map((tx: Transaction) => ({
+          ...tx,
+          amount: Number(tx.amount),
+          balanceBefore: Number(tx.balanceBefore),
+          balanceAfter: Number(tx.balanceAfter),
+        }));
+        setTransactions(normalized);
       }
     } catch {
       showToast('Failed to load transactions', 'error');
@@ -172,7 +187,15 @@ export default function BranchDetailPage() {
       });
       if (res.ok) {
         const json = await res.json();
-        setBranchTransactions(json.data || json);
+        const raw = json.data || json;
+        // Convert Prisma Decimal strings to numbers
+        const normalized = (raw as Transaction[]).map((tx: Transaction) => ({
+          ...tx,
+          amount: Number(tx.amount),
+          balanceBefore: Number(tx.balanceBefore),
+          balanceAfter: Number(tx.balanceAfter),
+        }));
+        setBranchTransactions(normalized);
       }
     } catch {
       showToast('Failed to load branch transactions', 'error');
@@ -211,7 +234,15 @@ export default function BranchDetailPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setDailyReports(data);
+        // Convert Prisma Decimal strings to numbers
+        const normalized = (data as DailyReport[]).map((r: DailyReport) => ({
+          ...r,
+          totalDeposit: Number(r.totalDeposit),
+          totalWithdrawal: Number(r.totalWithdrawal),
+          playerBalance: Number(r.playerBalance),
+          profitLoss: Number(r.profitLoss),
+        }));
+        setDailyReports(normalized);
       }
     } catch {
       showToast('Failed to load daily reports', 'error');
