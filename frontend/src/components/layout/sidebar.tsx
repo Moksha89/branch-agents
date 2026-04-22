@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   GitBranch,
   GitCompare,
+  Users,
   Menu,
   X,
 } from 'lucide-react';
@@ -23,10 +24,13 @@ interface UserData {
   avatar: string | null;
 }
 
+const adminRoles = ['SUPER_ADMIN', 'ADMIN'];
+
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Branches', href: '/branches', icon: GitBranch },
   { label: 'Compare', href: '/branches/compare', icon: GitCompare },
+  { label: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
@@ -99,7 +103,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
           {/* Nav */}
           <nav className="flex-1 px-3 py-4 space-y-1">
-            {navItems.map((item) => {
+            {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || (user && adminRoles.includes(user.role))).map((item) => {
               const isActive =
                 item.href === '/branches/compare'
                   ? pathname === '/branches/compare'

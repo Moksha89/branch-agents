@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private audit: AuditService,
+    private prisma: PrismaService,
   ) {}
 
   async login(loginDto: LoginDto) {
@@ -36,6 +38,12 @@ export class AuthService {
     await this.usersService.updateLastLogin(user.id);
     this.audit.logAuth('LOGIN_SUCCESS', loginDto.username, true);
 
+    // Fetch branch access for this user
+    const branchAccess = await this.prisma.branchAccess.findMany({
+      where: { userId: user.id },
+      include: { branch: { select: { id: true, name: true, code: true } } },
+    });
+
     const payload = {
       sub: user.id,
       username: user.username,
@@ -49,6 +57,11 @@ export class AuthService {
         fullName: user.fullName,
         role: user.role,
         avatar: user.avatar,
+        branchAccess: branchAccess.map((ba) => ({
+          branchId: ba.branchId,
+          branchName: ba.branch.name,
+          accessLevel: ba.accessLevel,
+        })),
       },
       accessToken: this.jwtService.sign(payload),
     };

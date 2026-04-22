@@ -25,6 +25,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
+      include: {
+        branchAccess: { select: { branchId: true, accessLevel: true } },
+      },
     });
     if (!user) {
       throw new UnauthorizedException('User no longer exists. Please log in again.');
@@ -33,6 +36,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Your account has been deactivated. Please contact an administrator.');
     }
-    return { sub: payload.sub, username: payload.username, role: user.role };
+    return {
+      sub: payload.sub,
+      username: payload.username,
+      role: user.role,
+      branchAccess: user.branchAccess,
+    };
   }
 }

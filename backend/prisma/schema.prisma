@@ -34,9 +34,10 @@ model User {
   lastLogin    DateTime?     @map("last_login")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
-  bankAccounts BankAccount[]
-  transactions Transaction[]
-  dailyReports DailyReport[]
+  bankAccounts    BankAccount[]
+  transactions    Transaction[]
+  dailyReports    DailyReport[]
+  branchAccess    BranchAccess[]
 
   @@map("users")
 }
@@ -52,8 +53,9 @@ model Branch {
   isActive     Boolean       @default(true) @map("is_active")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
-  bankAccounts  BankAccount[]
-  dailyReports  DailyReport[]
+  bankAccounts   BankAccount[]
+  dailyReports   DailyReport[]
+  branchAccess   BranchAccess[]
 
   @@map("branches")
 }
@@ -129,6 +131,28 @@ model Document {
 
   @@index([bankAccountId])
   @@map("documents")
+}
+
+enum AccessLevel {
+  READ
+  WRITE
+  FULL
+}
+
+model BranchAccess {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId    String      @map("branch_id")
+  branch      Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  accessLevel AccessLevel @default(READ) @map("access_level")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@unique([userId, branchId])
+  @@index([userId])
+  @@index([branchId])
+  @@map("branch_access")
 }
 
 enum AccountStatus {
