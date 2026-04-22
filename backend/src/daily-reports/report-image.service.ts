@@ -44,15 +44,13 @@ export class ReportImageService {
       orderBy: { fullName: 'asc' },
     });
 
-    // Fetch yesterday's report for comparison
-    const reportDate = new Date(report.date);
-    const yesterday = new Date(reportDate);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayReport = await this.prisma.dailyReport.findFirst({
+    // Fetch the LAST available report before this one (not just yesterday)
+    const previousReport = await this.prisma.dailyReport.findFirst({
       where: {
         branchId: report.branchId,
-        date: yesterday,
+        date: { lt: report.date },
       },
+      orderBy: { date: 'desc' },
     });
 
     // Calculate status summaries
@@ -80,12 +78,13 @@ export class ReportImageService {
       Number(report.totalWithdrawal),
       Number(report.profitLoss),
       Number(report.playerBalance),
-      yesterdayReport
+      previousReport
         ? {
-            totalDeposit: Number(yesterdayReport.totalDeposit),
-            totalWithdrawal: Number(yesterdayReport.totalWithdrawal),
-            profitLoss: Number(yesterdayReport.profitLoss),
-            playerBalance: Number(yesterdayReport.playerBalance),
+            date: previousReport.date,
+            totalDeposit: Number(previousReport.totalDeposit),
+            totalWithdrawal: Number(previousReport.totalWithdrawal),
+            profitLoss: Number(previousReport.profitLoss),
+            playerBalance: Number(previousReport.playerBalance),
           }
         : null,
       report.createdBy.fullName,
@@ -102,77 +101,79 @@ export class ReportImageService {
     totalWithdrawal: number,
     profitLoss: number,
     playerBalance: number,
-    yesterdayData: { totalDeposit: number; totalWithdrawal: number; profitLoss: number; playerBalance: number } | null,
+    previousData: { date: Date; totalDeposit: number; totalWithdrawal: number; profitLoss: number; playerBalance: number } | null,
     createdBy: string,
   ): Buffer {
     const W = 900;
     const PADDING = 30;
-    const ROW_H = 28;
-    const HEADER_H = 36;
+    const ROW_H = 30;
+    const HEADER_H = 38;
 
     // Calculate height
-    let h = PADDING; // top padding
-    h += 50; // title
+    let h = PADDING;
+    h += 55; // title
     h += 25; // date line
-    h += 20; // gap
+    h += 25; // gap
 
     // Accounts table
-    h += 25; // section title
-    h += HEADER_H; // table header
-    h += accounts.length * ROW_H; // rows
+    h += 30; // section title
+    h += HEADER_H;
+    h += accounts.length * ROW_H;
     h += ROW_H; // total row
-    h += 25; // gap
+    h += 30; // gap
 
     // Status summary
-    h += 25; // section title
-    h += HEADER_H; // header
-    h += statusSummaries.length * ROW_H; // rows
-    h += 25; // gap
+    h += 30; // section title
+    h += HEADER_H;
+    h += statusSummaries.length * ROW_H;
+    h += 30; // gap
 
     // P/L section
-    h += 25; // section title
-    h += 6 * ROW_H; // today rows
-    if (yesterdayData) {
-      h += 15; // gap
-      h += 25; // yesterday title
-      h += 4 * ROW_H; // yesterday rows
-    }
+    h += 30; // section title
+    h += 5 * ROW_H; // today rows
     h += 25; // gap
+    if (previousData) {
+      h += 30; // previous title
+      h += 4 * ROW_H;
+    } else {
+      h += ROW_H;
+    }
+    h += 30; // gap
 
     // Footer
-    h += 30;
-    h += PADDING; // bottom
+    h += 35;
+    h += PADDING;
 
     const canvas = createCanvas(W, h);
     const ctx = canvas.getContext('2d');
 
-    // Background
-    ctx.fillStyle = '#0f172a';
+    // ===== WHITE BACKGROUND =====
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, h);
 
     let y = PADDING;
 
-    // ===== TITLE =====
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 26px sans-serif';
-    ctx.fillText(`Daily Report — ${branchName}`, PADDING, y + 30);
-    y += 50;
+    // ===== HEADER BAR =====
+    const headerBarH = 60;
+    ctx.fillStyle = '#1e3a5f';
+    ctx.fillRect(0, 0, W, headerBarH);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillText(`Daily Report — ${branchName}`, PADDING, 38);
+    y = headerBarH + 15;
 
     // Date & timestamp
     const dateStr = new Date(reportDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '14px sans-serif';
-    ctx.fillText(`Report Date: ${dateStr}  |  Generated: ${now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ${timeStr}`, PADDING, y + 15);
-    y += 25;
-    y += 20;
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '13px sans-serif';
+    ctx.fillText(`Report Date: ${dateStr}  |  Generated: ${now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ${timeStr}`, PADDING, y + 12);
+    y += 30;
 
     // ===== ACCOUNT BALANCES TABLE =====
-    ctx.fillStyle = '#60a5fa';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.fillText('Account Balances', PADDING, y + 15);
-    y += 25;
+    this.drawSectionTitle(ctx, 'Account Balances', PADDING, y, '#1e3a5f');
+    y += 30;
 
     const cols = [
       { label: '#', x: PADDING, w: 35 },
@@ -183,50 +184,58 @@ export class ReportImageService {
       { label: 'Balance', x: PADDING + 635, w: W - PADDING * 2 - 635 },
     ];
 
-    // Header
-    ctx.fillStyle = '#1e293b';
+    // Header row
+    ctx.fillStyle = '#1e3a5f';
     ctx.fillRect(PADDING, y, W - PADDING * 2, HEADER_H);
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 12px sans-serif';
     for (const col of cols) {
-      ctx.fillText(col.label, col.x + 8, y + 23);
+      ctx.fillText(col.label, col.x + 8, y + 24);
     }
     y += HEADER_H;
 
-    // Rows
+    // Data rows
     accounts.forEach((acc, idx) => {
-      ctx.fillStyle = idx % 2 === 0 ? '#1e293b80' : '#0f172a';
+      ctx.fillStyle = idx % 2 === 0 ? '#f8fafc' : '#eef2f7';
       ctx.fillRect(PADDING, y, W - PADDING * 2, ROW_H);
+      // Row border
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(PADDING, y, W - PADDING * 2, ROW_H);
+
       ctx.font = '12px sans-serif';
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fillText(String(idx + 1), cols[0].x + 8, y + 19);
-      ctx.fillText(acc.fullName.substring(0, 22), cols[1].x + 8, y + 19);
-      ctx.fillText(acc.bankName.substring(0, 18), cols[2].x + 8, y + 19);
-      ctx.fillText(this.maskAccount(acc.accountNumber), cols[3].x + 8, y + 19);
-      ctx.fillStyle = this.statusColor(acc.status);
-      ctx.fillText(this.statusLabel(acc.status), cols[4].x + 8, y + 19);
-      ctx.fillStyle = '#4ade80';
+      ctx.fillStyle = '#374151';
+      ctx.fillText(String(idx + 1), cols[0].x + 8, y + 20);
+      ctx.fillText(acc.fullName.substring(0, 22), cols[1].x + 8, y + 20);
+      ctx.fillText(acc.bankName.substring(0, 18), cols[2].x + 8, y + 20);
+      ctx.fillText(this.maskAccount(acc.accountNumber), cols[3].x + 8, y + 20);
+      ctx.fillStyle = this.statusColorLight(acc.status);
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(this.statusLabel(acc.status), cols[4].x + 8, y + 20);
+      ctx.fillStyle = '#059669';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(`₹${acc.bankBalance.toLocaleString('en-IN')}`, cols[5].x + 8, y + 19);
+      ctx.fillText(`₹${acc.bankBalance.toLocaleString('en-IN')}`, cols[5].x + 8, y + 20);
       y += ROW_H;
     });
 
     // Total row
-    ctx.fillStyle = '#1e40af40';
+    ctx.fillStyle = '#dbeafe';
     ctx.fillRect(PADDING, y, W - PADDING * 2, ROW_H);
-    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#93c5fd';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(PADDING, y, W - PADDING * 2, ROW_H);
+    ctx.fillStyle = '#1e3a5f';
     ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(`TOTAL (${accounts.length} accounts)`, cols[1].x + 8, y + 19);
-    ctx.fillStyle = '#facc15';
-    ctx.fillText(`₹${grandTotal.toLocaleString('en-IN')}`, cols[5].x + 8, y + 19);
+    ctx.fillText(`TOTAL (${accounts.length} accounts)`, cols[1].x + 8, y + 20);
+    ctx.fillStyle = '#b45309';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`₹${grandTotal.toLocaleString('en-IN')}`, cols[5].x + 8, y + 20);
     y += ROW_H;
     y += 25;
 
     // ===== STATUS SUMMARY =====
-    ctx.fillStyle = '#a78bfa';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.fillText('Balance by Status', PADDING, y + 15);
-    y += 25;
+    this.drawSectionTitle(ctx, 'Balance by Status', PADDING, y, '#7c3aed');
+    y += 30;
 
     const statusCols = [
       { label: 'Status', x: PADDING, w: 200 },
@@ -234,101 +243,121 @@ export class ReportImageService {
       { label: 'Total Balance', x: PADDING + 350, w: W - PADDING * 2 - 350 },
     ];
 
-    ctx.fillStyle = '#1e293b';
+    ctx.fillStyle = '#7c3aed';
     ctx.fillRect(PADDING, y, W - PADDING * 2, HEADER_H);
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 12px sans-serif';
     for (const col of statusCols) {
-      ctx.fillText(col.label, col.x + 8, y + 23);
+      ctx.fillText(col.label, col.x + 8, y + 24);
     }
     y += HEADER_H;
 
     statusSummaries.forEach((ss, idx) => {
-      ctx.fillStyle = idx % 2 === 0 ? '#1e293b80' : '#0f172a';
+      ctx.fillStyle = idx % 2 === 0 ? '#faf5ff' : '#f3e8ff';
       ctx.fillRect(PADDING, y, W - PADDING * 2, ROW_H);
-      ctx.fillStyle = this.statusColor(ss.status);
+      ctx.strokeStyle = '#e9d5ff';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(PADDING, y, W - PADDING * 2, ROW_H);
+      ctx.fillStyle = this.statusColorLight(ss.status);
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(this.statusLabel(ss.status), statusCols[0].x + 8, y + 19);
-      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText(this.statusLabel(ss.status), statusCols[0].x + 8, y + 20);
+      ctx.fillStyle = '#374151';
       ctx.font = '12px sans-serif';
-      ctx.fillText(String(ss.count), statusCols[1].x + 8, y + 19);
-      ctx.fillStyle = '#4ade80';
+      ctx.fillText(String(ss.count), statusCols[1].x + 8, y + 20);
+      ctx.fillStyle = '#059669';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(`₹${ss.total.toLocaleString('en-IN')}`, statusCols[2].x + 8, y + 19);
+      ctx.fillText(`₹${ss.total.toLocaleString('en-IN')}`, statusCols[2].x + 8, y + 20);
       y += ROW_H;
     });
     y += 25;
 
-    // ===== P/L SECTION =====
-    ctx.fillStyle = '#34d399';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.fillText("Today's P/L Summary", PADDING, y + 15);
-    y += 25;
+    // ===== TODAY'S P/L SECTION =====
+    this.drawSectionTitle(ctx, "Today's P/L Summary", PADDING, y, '#059669');
+    y += 30;
 
     const plRows = [
-      { label: 'Total Deposit', value: `₹${totalDeposit.toLocaleString('en-IN')}`, color: '#4ade80' },
-      { label: 'Total Withdrawal', value: `₹${totalWithdrawal.toLocaleString('en-IN')}`, color: '#f87171' },
-      { label: 'P/L (Deposit - Withdrawal)', value: `${profitLoss >= 0 ? '+' : ''}₹${profitLoss.toLocaleString('en-IN')}`, color: profitLoss >= 0 ? '#4ade80' : '#f87171' },
-      { label: 'Player Balance', value: `₹${playerBalance.toLocaleString('en-IN')}`, color: '#60a5fa' },
-      { label: 'Total Account Balances', value: `₹${grandTotal.toLocaleString('en-IN')}`, color: '#facc15' },
+      { label: 'Total Deposit', value: `₹${totalDeposit.toLocaleString('en-IN')}`, color: '#059669' },
+      { label: 'Total Withdrawal', value: `₹${totalWithdrawal.toLocaleString('en-IN')}`, color: '#dc2626' },
+      { label: 'P/L (Deposit - Withdrawal)', value: `${profitLoss >= 0 ? '+' : ''}₹${profitLoss.toLocaleString('en-IN')}`, color: profitLoss >= 0 ? '#059669' : '#dc2626' },
+      { label: 'Player Balance', value: `₹${playerBalance.toLocaleString('en-IN')}`, color: '#2563eb' },
+      { label: 'Total Account Balances', value: `₹${grandTotal.toLocaleString('en-IN')}`, color: '#b45309' },
     ];
 
     for (let i = 0; i < plRows.length; i++) {
-      ctx.fillStyle = i % 2 === 0 ? '#1e293b80' : '#0f172a';
+      ctx.fillStyle = i % 2 === 0 ? '#f0fdf4' : '#ecfdf5';
       ctx.fillRect(PADDING, y, W - PADDING * 2, ROW_H);
-      ctx.fillStyle = '#94a3b8';
+      ctx.strokeStyle = '#bbf7d0';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(PADDING, y, W - PADDING * 2, ROW_H);
+      ctx.fillStyle = '#4b5563';
       ctx.font = '13px sans-serif';
-      ctx.fillText(plRows[i].label, PADDING + 8, y + 19);
+      ctx.fillText(plRows[i].label, PADDING + 12, y + 20);
       ctx.fillStyle = plRows[i].color;
       ctx.font = 'bold 14px sans-serif';
-      ctx.fillText(plRows[i].value, PADDING + 400, y + 19);
+      ctx.fillText(plRows[i].value, PADDING + 400, y + 20);
       y += ROW_H;
     }
 
-    // Yesterday's data
-    if (yesterdayData) {
-      y += 15;
-      ctx.fillStyle = '#fb923c';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillText("Yesterday's P/L Summary", PADDING, y + 15);
-      y += 25;
+    y += 15;
+
+    // ===== PREVIOUS REPORT DATA =====
+    if (previousData) {
+      const prevDateStr = new Date(previousData.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      this.drawSectionTitle(ctx, `Previous Report (${prevDateStr})`, PADDING, y, '#ea580c');
+      y += 30;
 
       const yRows = [
-        { label: 'Total Deposit', value: `₹${yesterdayData.totalDeposit.toLocaleString('en-IN')}`, color: '#4ade80' },
-        { label: 'Total Withdrawal', value: `₹${yesterdayData.totalWithdrawal.toLocaleString('en-IN')}`, color: '#f87171' },
-        { label: 'P/L (Deposit - Withdrawal)', value: `${yesterdayData.profitLoss >= 0 ? '+' : ''}₹${yesterdayData.profitLoss.toLocaleString('en-IN')}`, color: yesterdayData.profitLoss >= 0 ? '#4ade80' : '#f87171' },
-        { label: 'Player Balance', value: `₹${yesterdayData.playerBalance.toLocaleString('en-IN')}`, color: '#60a5fa' },
+        { label: 'Total Deposit', value: `₹${previousData.totalDeposit.toLocaleString('en-IN')}`, color: '#059669' },
+        { label: 'Total Withdrawal', value: `₹${previousData.totalWithdrawal.toLocaleString('en-IN')}`, color: '#dc2626' },
+        { label: 'P/L (Deposit - Withdrawal)', value: `${previousData.profitLoss >= 0 ? '+' : ''}₹${previousData.profitLoss.toLocaleString('en-IN')}`, color: previousData.profitLoss >= 0 ? '#059669' : '#dc2626' },
+        { label: 'Player Balance', value: `₹${previousData.playerBalance.toLocaleString('en-IN')}`, color: '#2563eb' },
       ];
 
       for (let i = 0; i < yRows.length; i++) {
-        ctx.fillStyle = i % 2 === 0 ? '#1e293b80' : '#0f172a';
+        ctx.fillStyle = i % 2 === 0 ? '#fff7ed' : '#ffedd5';
         ctx.fillRect(PADDING, y, W - PADDING * 2, ROW_H);
-        ctx.fillStyle = '#94a3b8';
+        ctx.strokeStyle = '#fed7aa';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(PADDING, y, W - PADDING * 2, ROW_H);
+        ctx.fillStyle = '#4b5563';
         ctx.font = '13px sans-serif';
-        ctx.fillText(yRows[i].label, PADDING + 8, y + 19);
+        ctx.fillText(yRows[i].label, PADDING + 12, y + 20);
         ctx.fillStyle = yRows[i].color;
         ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(yRows[i].value, PADDING + 400, y + 19);
+        ctx.fillText(yRows[i].value, PADDING + 400, y + 20);
         y += ROW_H;
       }
     } else {
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = 'italic 12px sans-serif';
+      ctx.fillText('No previous report available for this branch', PADDING + 12, y + 12);
       y += ROW_H;
-      ctx.fillStyle = '#64748b';
-      ctx.font = '12px sans-serif';
-      ctx.fillText('No report available for yesterday', PADDING + 8, y - 5);
     }
 
-    y += 25;
+    y += 20;
 
     // ===== FOOTER =====
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(PADDING, y, W - PADDING * 2, 1);
-    y += 10;
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = '#1e3a5f';
+    ctx.fillRect(0, y - 5, W, 40);
+    ctx.fillStyle = '#ffffff';
     ctx.font = '11px sans-serif';
-    ctx.fillText(`Generated by ${createdBy}  |  Systematic Web  |  ${branchName}`, PADDING, y + 12);
+    ctx.fillText(`Generated by ${createdBy}  |  Systematic Web  |  ${branchName}`, PADDING, y + 14);
 
     return canvas.toBuffer('image/png');
+  }
+
+  private drawSectionTitle(ctx: ReturnType<ReturnType<typeof createCanvas>['getContext']>, title: string, x: number, y: number, color: string): void {
+    ctx.fillStyle = color;
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(title, x, y + 14);
+    // Underline
+    const textWidth = ctx.measureText(title).width;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 18);
+    ctx.lineTo(x + textWidth + 5, y + 18);
+    ctx.stroke();
   }
 
   private maskAccount(num: string): string {
@@ -347,14 +376,14 @@ export class ReportImageService {
     return map[status] || status;
   }
 
-  private statusColor(status: string): string {
+  private statusColorLight(status: string): string {
     const map: Record<string, string> = {
-      ACTIVE: '#4ade80',
-      DEBIT_FREEZE: '#facc15',
-      CREDIT_FREEZE: '#fb923c',
-      CYBER: '#f87171',
-      CLOSED: '#94a3b8',
+      ACTIVE: '#059669',
+      DEBIT_FREEZE: '#d97706',
+      CREDIT_FREEZE: '#ea580c',
+      CYBER: '#dc2626',
+      CLOSED: '#6b7280',
     };
-    return map[status] || '#e2e8f0';
+    return map[status] || '#374151';
   }
 }
