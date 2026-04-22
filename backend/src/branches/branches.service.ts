@@ -3,6 +3,24 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 
+// Mask sensitive fields in bank account data
+function maskAccountSensitive(account: Record<string, unknown>): Record<string, unknown> {
+  const mask = (val: string | null | undefined) => {
+    if (!val || val.length <= 4) return val ? '****' : null;
+    return '****' + val.slice(-4);
+  };
+  return {
+    ...account,
+    aadharNumber: mask(account.aadharNumber as string),
+    panCardNumber: mask(account.panCardNumber as string),
+    debitCardNumber: mask(account.debitCardNumber as string),
+    debitCardExpiry: account.debitCardExpiry ? '**/**' : null,
+    debitCardCvv: account.debitCardCvv ? '***' : null,
+    netbankingUsername: mask(account.netbankingUsername as string),
+    netbankingPassword: account.netbankingPassword ? '********' : null,
+  };
+}
+
 @Injectable()
 export class BranchesService {
   constructor(private prisma: PrismaService) {}
@@ -92,7 +110,13 @@ export class BranchesService {
     if (!branch) {
       throw new NotFoundException('Branch not found');
     }
-    return branch;
+    // Mask sensitive fields in bank account data
+    return {
+      ...branch,
+      bankAccounts: branch.bankAccounts.map((a) =>
+        maskAccountSensitive(a as unknown as Record<string, unknown>),
+      ),
+    };
   }
 
   async compare() {

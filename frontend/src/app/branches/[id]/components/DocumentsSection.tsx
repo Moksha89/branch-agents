@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, FileText, Download, X, File, Image } from 'lucide-react';
 import { AccountDocument } from './types';
 
@@ -40,7 +40,9 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Upload form state
   const [formName, setFormName] = useState('');
@@ -49,7 +51,7 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
 
   const getToken = () => localStorage.getItem('accessToken');
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     setLoading(true);
@@ -60,17 +62,19 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
       if (res.ok) {
         const data = await res.json();
         setDocuments(data);
+      } else {
+        setError('Failed to load documents');
       }
     } catch {
-      // silent
+      setError('Failed to load documents');
     } finally {
       setLoading(false);
     }
-  };
+  }, [accountId]);
 
   useEffect(() => {
     fetchDocuments();
-  }, [accountId]);
+  }, [fetchDocuments]);
 
   const handleUpload = async () => {
     const token = getToken();
@@ -91,10 +95,13 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
       if (res.ok) {
         setShowUploadForm(false);
         resetForm();
+        setError(null);
         await fetchDocuments();
+      } else {
+        setError('Failed to upload document');
       }
     } catch {
-      // silent
+      setError('Failed to upload document');
     } finally {
       setSaving(false);
     }
@@ -110,10 +117,14 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
+        setConfirmDeleteId(null);
+        setError(null);
         await fetchDocuments();
+      } else {
+        setError('Failed to delete document');
       }
     } catch {
-      // silent
+      setError('Failed to delete document');
     } finally {
       setDeleting(null);
     }
@@ -143,6 +154,14 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
           </button>
         )}
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-3 px-3 py-2 bg-red-950/40 border border-red-800/50 rounded-lg text-red-300 text-xs flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 ml-2"><X className="h-3 w-3" /></button>
+        </div>
+      )}
 
       {/* Upload Form */}
       {showUploadForm && (
@@ -267,14 +286,31 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
                   <Download className="h-3.5 w-3.5" />
                 </a>
                 {!readOnly && (
-                  <button
-                    onClick={() => handleDelete(doc.id)}
-                    disabled={deleting === doc.id}
-                    className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
-                    title="Delete document"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  confirmDeleteId === doc.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleDelete(doc.id)}
+                        disabled={deleting === doc.id}
+                        className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deleting === doc.id ? '...' : 'Yes'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-1.5 py-0.5 rounded text-slate-400 text-[10px] hover:text-white"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(doc.id)}
+                      className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                      title="Delete document"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )
                 )}
               </div>
             </div>

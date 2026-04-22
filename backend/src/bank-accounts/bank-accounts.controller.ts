@@ -49,8 +49,11 @@ export class BankAccountsController {
           },
         }),
         fileFilter: (_req, file, cb) => {
-          if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
-            cb(new Error('Only image files are allowed'), false);
+          // Allow images for photo fields, allow all file types for otherDocuments
+          if (file.fieldname === 'otherDocuments') {
+            cb(null, true);
+          } else if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+            cb(new Error('Only image files are allowed for photo fields'), false);
           } else {
             cb(null, true);
           }

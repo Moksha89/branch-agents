@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, QrCode, Smartphone, IndianRupee, Pencil, X, Image } from 'lucide-react';
 import { Merchant } from './types';
 
@@ -32,7 +32,9 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
   const [editBalanceValue, setEditBalanceValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [qrPreview, setQrPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Add form state
   const [formName, setFormName] = useState('');
@@ -44,7 +46,7 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
 
   const getToken = () => localStorage.getItem('accessToken');
 
-  const fetchMerchants = async () => {
+  const fetchMerchants = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     setLoading(true);
@@ -55,17 +57,19 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
       if (res.ok) {
         const data = await res.json();
         setMerchants(data);
+      } else {
+        setError('Failed to load merchants');
       }
     } catch {
-      // silent
+      setError('Failed to load merchants');
     } finally {
       setLoading(false);
     }
-  };
+  }, [accountId]);
 
   useEffect(() => {
     fetchMerchants();
-  }, [accountId]);
+  }, [fetchMerchants]);
 
   const handleAdd = async () => {
     const token = getToken();
@@ -89,10 +93,13 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
       if (res.ok) {
         setShowAddForm(false);
         resetForm();
+        setError(null);
         await fetchMerchants();
+      } else {
+        setError('Failed to add merchant');
       }
     } catch {
-      // silent
+      setError('Failed to add merchant');
     } finally {
       setSaving(false);
     }
@@ -113,10 +120,13 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
       if (res.ok) {
         setEditBalanceId(null);
         setEditBalanceValue('');
+        setError(null);
         await fetchMerchants();
+      } else {
+        setError('Failed to update balance');
       }
     } catch {
-      // silent
+      setError('Failed to update balance');
     } finally {
       setSaving(false);
     }
@@ -132,10 +142,14 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
+        setConfirmDeleteId(null);
+        setError(null);
         await fetchMerchants();
+      } else {
+        setError('Failed to delete merchant');
       }
     } catch {
-      // silent
+      setError('Failed to delete merchant');
     } finally {
       setDeleting(null);
     }
@@ -168,6 +182,14 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
           </button>
         )}
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-3 px-3 py-2 bg-red-950/40 border border-red-800/50 rounded-lg text-red-300 text-xs flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 ml-2"><X className="h-3 w-3" /></button>
+        </div>
+      )}
 
       {/* Add Merchant Form */}
       {showAddForm && (
@@ -348,14 +370,31 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
 
               {/* Delete */}
               {!readOnly && (
-                <button
-                  onClick={() => handleDelete(m.id)}
-                  disabled={deleting === m.id}
-                  className="flex-shrink-0 p-1.5 text-slate-500 hover:text-red-400 transition-colors"
-                  title="Delete merchant"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                confirmDeleteId === m.id ? (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      disabled={deleting === m.id}
+                      className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {deleting === m.id ? '...' : 'Yes'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="px-1.5 py-0.5 rounded text-slate-400 text-[10px] hover:text-white"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(m.id)}
+                    className="flex-shrink-0 p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                    title="Delete merchant"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )
               )}
             </div>
           ))}
