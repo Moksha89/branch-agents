@@ -42,8 +42,23 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  async changePassword(
+    @Request() req: { user: { sub: string } },
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(req.user.sub, body.currentPassword, body.newPassword);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  async getFullProfile(@Request() req: { user: { sub: string } }) {
+    return this.authService.getProfile(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getProfile(@Request() req: { user: { sub: string } }) {
+  async getMe(@Request() req: { user: { sub: string } }) {
     const user = await this.authService.validateUser(req.user.sub);
     return {
       id: user.id,

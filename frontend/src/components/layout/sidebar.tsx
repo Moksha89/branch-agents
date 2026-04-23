@@ -11,6 +11,7 @@ import {
   Receipt,
   Menu,
   X,
+  Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 import GlobalSearch from '@/components/global-search';
@@ -128,7 +129,15 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
           {/* User section */}
           <div className="px-3 py-4 border-t border-slate-700/50">
-            <div className="flex items-center gap-3 px-3">
+            <Link
+              href="/profile"
+              onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                pathname === '/profile'
+                  ? 'bg-blue-600/20'
+                  : 'hover:bg-slate-700/50'
+              }`}
+            >
               <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                 {user.fullName.charAt(0).toUpperCase()}
               </div>
@@ -140,14 +149,20 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
                   {user.role.toLowerCase().replace('_', ' ')}
                 </p>
               </div>
+              <Settings className={`h-4 w-4 flex-shrink-0 ${
+                pathname === '/profile' ? 'text-blue-400' : 'text-slate-500'
+              }`} />
+            </Link>
+            <div className="flex items-center justify-end px-3 mt-2">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={handleLogout}
-                className="text-slate-400 hover:text-white hover:bg-slate-700 flex-shrink-0"
+                className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 text-xs gap-1.5"
                 title="Logout"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5" />
+                Logout
               </Button>
             </div>
           </div>

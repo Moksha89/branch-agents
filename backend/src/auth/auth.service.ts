@@ -242,6 +242,54 @@ export class AuthService {
     };
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const bcrypt = await import('bcrypt');
+    const isCurrentValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    if (newPassword.length < 6) {
+      throw new BadRequestException('New password must be at least 6 characters');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    this.audit.logAuth('PASSWORD_CHANGED', user.username, true);
+
+    return { message: 'Password changed successfully' };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      telegramLinked: !!user.telegramChatId,
+      telegramChatId: user.telegramChatId ? `***${user.telegramChatId.slice(-4)}` : null,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+    };
+  }
+
   async validateUser(userId: string) {
     const user = await this.usersService.findById(userId);
     if (!user || user.status !== 'ACTIVE') {
