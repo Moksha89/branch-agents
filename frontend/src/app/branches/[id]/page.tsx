@@ -222,7 +222,8 @@ export default function BranchDetailPage() {
 
   useEffect(() => {
     fetchBranch();
-  }, [fetchBranch]);
+    fetchAllBranches();
+  }, [fetchBranch, fetchAllBranches]);
 
   const fetchDailyReports = useCallback(async () => {
     const token = getToken();
