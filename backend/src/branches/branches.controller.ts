@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -30,17 +30,17 @@ export class BranchesController {
   }
 
   @Get('compare/all')
-  async compare() {
-    return this.branchesService.compare();
+  async compare(@Request() req: { user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] } }) {
+    return this.branchesService.compare(req.user);
   }
 
   @Get()
-  async findAll() {
-    return this.branchesService.findAll();
+  async findAll(@Request() req: { user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] } }) {
+    return this.branchesService.findAll(req.user);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.branchesService.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req: { user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] } }) {
+    return this.branchesService.findOne(id, req.user);
   }
 }

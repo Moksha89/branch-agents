@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -21,9 +21,25 @@ function maskAccountSensitive(account: Record<string, unknown>): Record<string, 
   };
 }
 
+interface JwtUser {
+  sub: string;
+  role: string;
+  branchAccess: { branchId: string; accessLevel: string }[];
+}
+
 @Injectable()
 export class BranchesService {
   constructor(private prisma: PrismaService) {}
+
+  private isAdminRole(role: string): boolean {
+    return role === 'SUPER_ADMIN' || role === 'ADMIN';
+  }
+
+  private getAccessibleBranchIds(user: JwtUser): string[] | null {
+    // Admins see all branches (return null = no filter)
+    if (this.isAdminRole(user.role)) return null;
+    return user.branchAccess.map((ba) => ba.branchId);
+  }
 
   private generateCode(name: string): string {
     const prefix = name
@@ -83,9 +99,13 @@ export class BranchesService {
     return { deleted: true };
   }
 
-  async findAll() {
+  async findAll(user: JwtUser) {
+    const branchIds = this.getAccessibleBranchIds(user);
     return this.prisma.branch.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(branchIds !== null && { id: { in: branchIds } }),
+      },
       include: {
         _count: { select: { bankAccounts: true } },
         bankAccounts: {
@@ -97,7 +117,7 @@ export class BranchesService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user: JwtUser) {
     const branch = await this.prisma.branch.findUnique({
       where: { id },
       include: {
@@ -110,6 +130,13 @@ export class BranchesService {
     if (!branch) {
       throw new NotFoundException('Branch not found');
     }
+    // Check branch access for non-admin users
+    if (!this.isAdminRole(user.role)) {
+      const hasAccess = user.branchAccess.some((ba) => ba.branchId === id);
+      if (!hasAccess) {
+        throw new ForbiddenException('You do not have access to this branch');
+      }
+    }
     // Mask sensitive fields and normalize Decimal fields in bank account data
     return {
       ...branch,
@@ -120,9 +147,13 @@ export class BranchesService {
     };
   }
 
-  async compare() {
+  async compare(user: JwtUser) {
+    const branchIds = this.getAccessibleBranchIds(user);
     const branches = await this.prisma.branch.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(branchIds !== null && { id: { in: branchIds } }),
+      },
       include: {
         bankAccounts: {
           select: { bankBalance: true, status: true },

@@ -1,11 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+interface JwtUser {
+  sub: string;
+  role: string;
+  branchAccess: { branchId: string; accessLevel: string }[];
+}
+
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getStats() {
+  private isAdminRole(role: string): boolean {
+    return role === 'SUPER_ADMIN' || role === 'ADMIN';
+  }
+
+  private getAccessibleBranchIds(user: JwtUser): string[] | null {
+    if (this.isAdminRole(user.role)) return null;
+    return user.branchAccess.map((ba) => ba.branchId);
+  }
+
+  async getStats(user: JwtUser) {
+    const branchIds = this.getAccessibleBranchIds(user);
+    const branchFilter = branchIds !== null ? { id: { in: branchIds } } : {};
+    const accountFilter = branchIds !== null ? { branchId: { in: branchIds } } : {};
+    const txFilter = branchIds !== null ? { fromAccount: { branchId: { in: branchIds } } } : {};
+
     const [
       totalBranches,
       totalAccounts,
@@ -15,11 +35,11 @@ export class DashboardService {
       dailyReports,
       accountsByStatus,
     ] = await Promise.all([
-      this.prisma.branch.count({ where: { isActive: true } }),
-      this.prisma.bankAccount.count(),
-      this.prisma.transaction.count(),
+      this.prisma.branch.count({ where: { isActive: true, ...branchFilter } }),
+      this.prisma.bankAccount.count({ where: accountFilter }),
+      this.prisma.transaction.count({ where: txFilter }),
       this.prisma.branch.findMany({
-        where: { isActive: true },
+        where: { isActive: true, ...branchFilter },
         include: {
           bankAccounts: { select: { bankBalance: true, status: true } },
           dailyReports: {
@@ -30,6 +50,7 @@ export class DashboardService {
         },
       }),
       this.prisma.transaction.findMany({
+        where: txFilter,
         orderBy: { createdAt: 'desc' },
         take: 10,
         include: {
@@ -39,12 +60,14 @@ export class DashboardService {
         },
       }),
       this.prisma.dailyReport.findMany({
+        where: branchIds !== null ? { branchId: { in: branchIds } } : {},
         orderBy: { date: 'desc' },
         take: 30,
         include: { branch: { select: { name: true } } },
       }),
       this.prisma.bankAccount.groupBy({
         by: ['status'],
+        where: accountFilter,
         _count: { id: true },
         _sum: { bankBalance: true },
       }),
@@ -77,7 +100,7 @@ export class DashboardService {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const recentTxByDay = await this.prisma.transaction.groupBy({
       by: ['type'],
-      where: { createdAt: { gte: sevenDaysAgo } },
+      where: { createdAt: { gte: sevenDaysAgo }, ...txFilter },
       _count: { id: true },
       _sum: { amount: true },
     });
@@ -90,6 +113,7 @@ export class DashboardService {
 
     // Top accounts by balance
     const topAccounts = await this.prisma.bankAccount.findMany({
+      where: accountFilter,
       orderBy: { bankBalance: 'desc' },
       take: 10,
       select: {

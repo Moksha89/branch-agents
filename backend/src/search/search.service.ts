@@ -1,20 +1,39 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+interface JwtUser {
+  sub: string;
+  role: string;
+  branchAccess: { branchId: string; accessLevel: string }[];
+}
+
 @Injectable()
 export class SearchService {
   constructor(private prisma: PrismaService) {}
 
-  async search(query: string) {
+  private isAdminRole(role: string): boolean {
+    return role === 'SUPER_ADMIN' || role === 'ADMIN';
+  }
+
+  private getAccessibleBranchIds(user: JwtUser): string[] | null {
+    if (this.isAdminRole(user.role)) return null;
+    return user.branchAccess.map((ba) => ba.branchId);
+  }
+
+  async search(query: string, user: JwtUser) {
     if (!query || query.trim().length < 2) {
       return { accounts: [], transactions: [], branches: [] };
     }
     const q = query.trim();
     const contains = q;
+    const branchIds = this.getAccessibleBranchIds(user);
+    const branchFilter = branchIds !== null ? { id: { in: branchIds } } : {};
+    const accountBranchFilter = branchIds !== null ? { branchId: { in: branchIds } } : {};
 
     const [accounts, branches, transactions] = await Promise.all([
       this.prisma.bankAccount.findMany({
         where: {
+          ...accountBranchFilter,
           OR: [
             { fullName: { contains, mode: 'insensitive' } },
             { bankName: { contains, mode: 'insensitive' } },
@@ -36,6 +55,7 @@ export class SearchService {
       }),
       this.prisma.branch.findMany({
         where: {
+          ...branchFilter,
           OR: [
             { name: { contains, mode: 'insensitive' } },
             { code: { contains, mode: 'insensitive' } },
@@ -54,6 +74,7 @@ export class SearchService {
       }),
       this.prisma.transaction.findMany({
         where: {
+          ...(branchIds !== null ? { fromAccount: { branchId: { in: branchIds } } } : {}),
           OR: [
             { description: { contains, mode: 'insensitive' } },
             { fromAccount: { fullName: { contains, mode: 'insensitive' } } },
