@@ -138,6 +138,15 @@ export class BankAccountsController {
     return this.bankAccountsService.bulkStatusChange(body.accountIds, body.status);
   }
 
+  @Post(':id/transfer-branch')
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  async transferToBranch(
+    @Param('id') id: string,
+    @Body() body: { targetBranchId: string },
+  ) {
+    return this.bankAccountsService.transferToBranch(id, body.targetBranchId);
+  }
+
   @Get('check-duplicate')
   async checkDuplicate(@Query('accountNumber') accountNumber: string) {
     return this.bankAccountsService.checkDuplicate(accountNumber);

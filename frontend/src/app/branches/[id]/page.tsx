@@ -443,6 +443,29 @@ export default function BranchDetailPage() {
     }
   };
 
+  const handleTransferBranch = async (accountId: string, targetBranchId: string) => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/api/bank-accounts/${accountId}/transfer-branch`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetBranchId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        closePopup();
+        await fetchBranch();
+        showToast(`Account transferred from ${data.previousBranch} to ${data.newBranch}`);
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Failed to transfer account', 'error');
+      }
+    } catch {
+      showToast('Failed to transfer account', 'error');
+    }
+  };
+
   const handleStatusChange = async (account: BankAccount, newStatus: AccountStatus) => {
     const token = getToken();
     if (!token) return;
@@ -889,6 +912,8 @@ export default function BranchDetailPage() {
                 onClose={closePopup}
                 onViewMode={openViewPopup}
                 onDownloadCSV={downloadTransactionsCSV}
+                allBranches={allBranches}
+                onTransferBranch={handleTransferBranch}
               />
             )}
 

@@ -29,11 +29,6 @@ export class BranchesController {
     return this.branchesService.remove(id);
   }
 
-  @Get('compare/all')
-  async compare(@Request() req: { user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] } }) {
-    return this.branchesService.compare(req.user);
-  }
-
   @Get()
   async findAll(@Request() req: { user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] } }) {
     return this.branchesService.findAll(req.user);

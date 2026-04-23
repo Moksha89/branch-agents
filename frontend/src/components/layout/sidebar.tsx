@@ -7,7 +7,6 @@ import {
   LogOut,
   LayoutDashboard,
   GitBranch,
-  GitCompare,
   Users,
   Menu,
   X,
@@ -29,7 +28,6 @@ const adminRoles = ['SUPER_ADMIN', 'ADMIN'];
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Branches', href: '/branches', icon: GitBranch },
-  { label: 'Compare', href: '/branches/compare', icon: GitCompare },
   { label: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 
@@ -105,10 +103,8 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           <nav className="flex-1 px-3 py-4 space-y-1">
             {navItems.filter((item) => !('adminOnly' in item && item.adminOnly) || (user && adminRoles.includes(user.role))).map((item) => {
               const isActive =
-                item.href === '/branches/compare'
-                  ? pathname === '/branches/compare'
-                  : item.href === '/branches'
-                    ? pathname === '/branches' || (pathname.startsWith('/branches/') && pathname !== '/branches/compare')
+                item.href === '/branches'
+                    ? pathname === '/branches' || pathname.startsWith('/branches/')
                     : pathname === item.href || pathname.startsWith(item.href + '/');
               return (
                 <Link

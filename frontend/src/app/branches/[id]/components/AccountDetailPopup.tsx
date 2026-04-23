@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download, Camera, Eye } from 'lucide-react';
+import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download, Camera, Eye, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,11 @@ import { BankAccount, AccountStatus, Transaction, STATUS_CONFIG } from './types'
 import TransactionTable from './TransactionTable';
 import MerchantsSection from './MerchantsSection';
 import DocumentsSection from './DocumentsSection';
+
+interface Branch {
+  id: string;
+  name: string;
+}
 
 interface AccountDetailPopupProps {
   account: BankAccount;
@@ -32,6 +37,8 @@ interface AccountDetailPopupProps {
   onClose: () => void;
   onViewMode: (account: BankAccount) => void;
   onDownloadCSV: (txList: Transaction[], filename: string, accountId?: string) => void;
+  allBranches?: Branch[];
+  onTransferBranch?: (accountId: string, targetBranchId: string) => Promise<void>;
 }
 
 function DetailRow({ label, value }: { label: string; value: string | number | null }) {
@@ -74,9 +81,14 @@ export default function AccountDetailPopup({
   onClose,
   onViewMode,
   onDownloadCSV,
+  allBranches,
+  onTransferBranch,
 }: AccountDetailPopupProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState('');
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferBranchId, setTransferBranchId] = useState('');
+  const [transferring, setTransferring] = useState(false);
 
   const openPreview = (url: string, title: string) => {
     setPreviewUrl(url);
@@ -144,6 +156,15 @@ export default function AccountDetailPopup({
                 <Button
                   size="sm"
                   variant="ghost"
+                  onClick={() => setShowTransferModal(true)}
+                  className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                >
+                  <ArrowRightLeft className="h-4 w-4 mr-1" />
+                  Transfer
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
                   onClick={() => setShowDeleteConfirm(true)}
                   className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                 >
@@ -157,6 +178,48 @@ export default function AccountDetailPopup({
             </button>
           </div>
         </div>
+
+        {/* Transfer to Branch Modal */}
+        {showTransferModal && allBranches && onTransferBranch && (
+          <div className="mx-5 mt-4 p-4 bg-amber-950/40 border border-amber-800/50 rounded-xl">
+            <p className="text-amber-300 text-sm mb-3">
+              Transfer <strong>{account.fullName}</strong> to another branch:
+            </p>
+            <select
+              value={transferBranchId}
+              onChange={(e) => setTransferBranchId(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white mb-3"
+            >
+              <option value="">Select target branch...</option>
+              {allBranches.filter((b) => b.id !== account.branchId).map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={async () => {
+                  if (!transferBranchId) return;
+                  setTransferring(true);
+                  try {
+                    await onTransferBranch(account.id, transferBranchId);
+                    setShowTransferModal(false);
+                    setTransferBranchId('');
+                  } finally {
+                    setTransferring(false);
+                  }
+                }}
+                disabled={!transferBranchId || transferring}
+                className="bg-amber-600 hover:bg-amber-500 text-white"
+              >
+                {transferring ? 'Transferring...' : 'Confirm Transfer'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setShowTransferModal(false); setTransferBranchId(''); }} className="text-slate-400">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation */}
         {showDeleteConfirm && (

@@ -42,7 +42,7 @@ export interface Branch {
 
 export interface Transaction {
   id: string;
-  type: 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER';
+  type: 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER' | 'IN_TRANSFER';
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
@@ -61,7 +61,7 @@ export interface AllBranch {
   bankAccounts: { id: string; fullName: string; accountNumber: string }[];
 }
 
-export type TxType = 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER';
+export type TxType = 'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER' | 'OUT_TRANSFER' | 'IN_TRANSFER';
 export type TabType = 'accounts' | 'transactions' | 'daily-report';
 
 export interface DailyReport {
@@ -89,6 +89,7 @@ export function txTypeBadge(type: string): string {
     case 'WITHDRAWAL': return 'bg-red-500/15 text-red-400 border-red-500/30';
     case 'TRANSFER': return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
     case 'OUT_TRANSFER': return 'bg-orange-500/15 text-orange-400 border-orange-500/30';
+    case 'IN_TRANSFER': return 'bg-teal-500/15 text-teal-400 border-teal-500/30';
     default: return 'bg-slate-500/15 text-slate-400 border-slate-500/30';
   }
 }
@@ -99,6 +100,7 @@ export function txTypeShort(type: string): string {
     case 'WITHDRAWAL': return 'W';
     case 'TRANSFER': return 'T';
     case 'OUT_TRANSFER': return 'OT';
+    case 'IN_TRANSFER': return 'IT';
     default: return type;
   }
 }
@@ -109,6 +111,7 @@ export function txTypeLabel(type: string): string {
     case 'WITHDRAWAL': return 'Withdrawal';
     case 'TRANSFER': return 'Internal Transfer';
     case 'OUT_TRANSFER': return 'Out Transfer';
+    case 'IN_TRANSFER': return 'In Transfer';
     default: return type;
   }
 }
@@ -119,6 +122,7 @@ export function txTypeColor(type: string): string {
     case 'WITHDRAWAL': return 'text-red-400';
     case 'TRANSFER': return 'text-blue-400';
     case 'OUT_TRANSFER': return 'text-orange-400';
+    case 'IN_TRANSFER': return 'text-teal-400';
     default: return 'text-white';
   }
 }

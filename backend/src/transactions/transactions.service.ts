@@ -161,7 +161,7 @@ export class TransactionsService {
           });
           await tx.transaction.create({
             data: {
-              type: 'DEPOSIT',
+              type: 'IN_TRANSFER',
               amount,
               balanceBefore: toBefore,
               balanceAfter: toAfter,
@@ -234,7 +234,7 @@ export class TransactionsService {
           });
           await tx.transaction.create({
             data: {
-              type: 'DEPOSIT',
+              type: 'IN_TRANSFER',
               amount,
               balanceBefore: toBefore,
               balanceAfter: toAfter,

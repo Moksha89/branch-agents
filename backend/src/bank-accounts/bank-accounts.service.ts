@@ -278,6 +278,40 @@ export class BankAccountsService {
     return { updated: result.count, status };
   }
 
+  async transferToBranch(accountId: string, targetBranchId: string) {
+    const account = await this.prisma.bankAccount.findUnique({
+      where: { id: accountId },
+      include: { branch: { select: { id: true, name: true } } },
+    });
+    if (!account) {
+      throw new NotFoundException('Bank account not found');
+    }
+    if (account.branchId === targetBranchId) {
+      throw new BadRequestException('Account is already in this branch');
+    }
+    const targetBranch = await this.prisma.branch.findUnique({
+      where: { id: targetBranchId },
+    });
+    if (!targetBranch) {
+      throw new NotFoundException('Target branch not found');
+    }
+
+    const updated = await this.prisma.bankAccount.update({
+      where: { id: accountId },
+      data: { branchId: targetBranchId },
+      include: {
+        branch: { select: { id: true, name: true, code: true } },
+        createdBy: { select: { id: true, fullName: true, username: true } },
+      },
+    });
+
+    return {
+      ...maskSensitive(updated as unknown as Record<string, unknown>),
+      previousBranch: account.branch.name,
+      newBranch: targetBranch.name,
+    };
+  }
+
   async checkDuplicate(accountNumber: string) {
     if (!accountNumber || accountNumber.trim().length < 4) {
       return { isDuplicate: false, accounts: [] };
