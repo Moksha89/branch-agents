@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   GitBranch,
   Users,
+  Receipt,
   Menu,
   X,
 } from 'lucide-react';
@@ -28,6 +29,7 @@ const adminRoles = ['SUPER_ADMIN', 'ADMIN'];
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Branches', href: '/branches', icon: GitBranch },
+  { label: 'Expenses', href: '/expenses', icon: Receipt },
   { label: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];
 

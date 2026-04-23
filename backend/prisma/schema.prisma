@@ -38,6 +38,7 @@ model User {
   transactions    Transaction[]
   dailyReports    DailyReport[]
   branchAccess    BranchAccess[]
+  expenses        Expense[]
 
   @@map("users")
 }
@@ -56,6 +57,7 @@ model Branch {
   bankAccounts   BankAccount[]
   dailyReports   DailyReport[]
   branchAccess   BranchAccess[]
+  expenses       Expense[]
 
   @@map("branches")
 }
@@ -94,6 +96,7 @@ model BankAccount {
   transactionsTo      Transaction[] @relation("ToAccount")
   merchants           Merchant[]
   documents           Document[]
+  expenses            Expense[]
 
   @@index([branchId])
   @@index([createdById])
@@ -213,4 +216,25 @@ model DailyReport {
   @@index([createdById])
   @@unique([branchId, date])
   @@map("daily_reports")
+}
+
+model Expense {
+  id              String      @id @default(uuid())
+  amount          Decimal     @db.Decimal(15, 2)
+  reason          String
+  balanceBefore   Decimal     @map("balance_before") @db.Decimal(15, 2)
+  balanceAfter    Decimal     @map("balance_after") @db.Decimal(15, 2)
+  accountId       String      @map("account_id")
+  account         BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  branchId        String      @map("branch_id")
+  branch          Branch      @relation(fields: [branchId], references: [id])
+  createdById     String      @map("created_by_id")
+  createdBy       User        @relation(fields: [createdById], references: [id])
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  @@index([accountId])
+  @@index([branchId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@map("expenses")
 }

@@ -16,6 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
 import { MerchantsModule } from './merchants/merchants.module';
 import { DocumentsModule } from './documents/documents.module';
+import { ExpensesModule } from './expenses/expenses.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -33,6 +34,7 @@ import { DocumentsModule } from './documents/documents.module';
     ScheduledTasksModule,
     MerchantsModule,
     DocumentsModule,
+    ExpensesModule,
   ],
   controllers: [AppController],
   providers: [
