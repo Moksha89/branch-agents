@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download, Camera, Eye, ArrowRightLeft } from 'lucide-react';
+import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download, Camera, Eye, ArrowRightLeft, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { BankAccount, AccountStatus, Transaction, STATUS_CONFIG } from './types'
 import TransactionTable from './TransactionTable';
 import MerchantsSection from './MerchantsSection';
 import DocumentsSection from './DocumentsSection';
+import { downloadPDF, downloadExcel, formatTransactionRows } from '@/lib/download-utils';
 
 interface Branch {
   id: string;
@@ -86,6 +87,7 @@ export default function AccountDetailPopup({
 }: AccountDetailPopupProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState('');
+  const [showTxDownloadMenu, setShowTxDownloadMenu] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferBranchId, setTransferBranchId] = useState('');
   const [transferring, setTransferring] = useState(false);
@@ -419,13 +421,66 @@ export default function AccountDetailPopup({
                   <h4 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider">Transaction History</h4>
                 </div>
                 {filteredTransactions.length > 0 && (
-                  <button
-                    onClick={() => onDownloadCSV(filteredTransactions, `${account.fullName.replace(/\s+/g, '_')}_Statement`, account.id)}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium"
-                  >
-                    <Download className="h-3 w-3" />
-                    Download
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowTxDownloadMenu(!showTxDownloadMenu)}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium"
+                    >
+                      <Download className="h-3 w-3" />
+                      Download
+                      <ChevronDown className="h-2.5 w-2.5" />
+                    </button>
+                    {showTxDownloadMenu && (
+                      <>
+                        <div className="fixed inset-0 z-[60]" onClick={() => setShowTxDownloadMenu(false)} />
+                        <div className="absolute right-0 mt-1 z-[70] bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 w-40">
+                          <button
+                            onClick={() => {
+                              const { headers, rows, summaryRow } = formatTransactionRows(filteredTransactions, account.id);
+                              downloadPDF({
+                                title: `${account.fullName} — Statement`,
+                                filename: `${account.fullName.replace(/\s+/g, '_')}_Statement`,
+                                headers,
+                                rows,
+                                summaryRow,
+                                dateRange: { from: acctTxDateFrom, to: acctTxDateTo },
+                              });
+                              setShowTxDownloadMenu(false);
+                            }}
+                            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                          >
+                            <FileText className="h-3.5 w-3.5 text-red-400" />
+                            PDF
+                          </button>
+                          <button
+                            onClick={() => {
+                              const { headers, rows, summaryRow } = formatTransactionRows(filteredTransactions, account.id);
+                              downloadExcel({
+                                title: `${account.fullName} — Statement`,
+                                filename: `${account.fullName.replace(/\s+/g, '_')}_Statement`,
+                                headers,
+                                rows,
+                                summaryRow,
+                                dateRange: { from: acctTxDateFrom, to: acctTxDateTo },
+                              });
+                              setShowTxDownloadMenu(false);
+                            }}
+                            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                          >
+                            <FileSpreadsheet className="h-3.5 w-3.5 text-green-400" />
+                            Excel
+                          </button>
+                          <button
+                            onClick={() => { onDownloadCSV(filteredTransactions, `${account.fullName.replace(/\s+/g, '_')}_Statement`, account.id); setShowTxDownloadMenu(false); }}
+                            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                          >
+                            <Download className="h-3.5 w-3.5 text-blue-400" />
+                            CSV
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
               {transactions.length > 0 && (

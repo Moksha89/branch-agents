@@ -12,11 +12,15 @@ import {
   CreditCard,
   Calendar,
   FileText,
+  FileSpreadsheet,
   AlertCircle,
+  Download,
+  ChevronDown,
 } from 'lucide-react';
 import Sidebar from '@/components/layout/sidebar';
 import { handleEnterKeyNavigation } from '@/lib/form-utils';
 import { showToast } from '@/components/ui/toast';
+import { downloadPDF, downloadExcel, formatExpenseRows } from '@/lib/download-utils';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -86,6 +90,9 @@ export default function ExpensesPage() {
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Download menu
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   const getToken = () => localStorage.getItem('accessToken');
 
@@ -359,6 +366,67 @@ export default function ExpensesPage() {
               >
                 Clear Filters
               </button>
+            )}
+            {filteredExpenses.length > 0 && (
+              <div className="relative ml-auto">
+                <button
+                  onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                {showDownloadMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowDownloadMenu(false)} />
+                    <div className="absolute right-0 mt-1 z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 w-44">
+                      <button
+                        onClick={() => {
+                          const { headers, rows, summaryRow } = formatExpenseRows(filteredExpenses);
+                          const branchLabel = filterBranchId
+                            ? branches.find((b) => b.id === filterBranchId)?.name || 'Filtered'
+                            : 'All_Branches';
+                          downloadPDF({
+                            title: `Expenses — ${branchLabel.replace(/_/g, ' ')}`,
+                            filename: `Expenses_${branchLabel.replace(/\s+/g, '_')}`,
+                            headers,
+                            rows,
+                            summaryRow,
+                            dateRange: { from: filterDateFrom, to: filterDateTo },
+                          });
+                          setShowDownloadMenu(false);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                      >
+                        <FileText className="h-4 w-4 text-red-400" />
+                        Download PDF
+                      </button>
+                      <button
+                        onClick={() => {
+                          const { headers, rows, summaryRow } = formatExpenseRows(filteredExpenses);
+                          const branchLabel = filterBranchId
+                            ? branches.find((b) => b.id === filterBranchId)?.name || 'Filtered'
+                            : 'All_Branches';
+                          downloadExcel({
+                            title: `Expenses — ${branchLabel.replace(/_/g, ' ')}`,
+                            filename: `Expenses_${branchLabel.replace(/\s+/g, '_')}`,
+                            headers,
+                            rows,
+                            summaryRow,
+                            dateRange: { from: filterDateFrom, to: filterDateTo },
+                          });
+                          setShowDownloadMenu(false);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                      >
+                        <FileSpreadsheet className="h-4 w-4 text-green-400" />
+                        Download Excel
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

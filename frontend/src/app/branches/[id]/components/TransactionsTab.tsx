@@ -1,8 +1,10 @@
 'use client';
 
-import { Download, ListFilter } from 'lucide-react';
+import { useState } from 'react';
+import { Download, ListFilter, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { Transaction } from './types';
 import TransactionTable from './TransactionTable';
+import { downloadPDF, downloadExcel, formatTransactionRows } from '@/lib/download-utils';
 
 interface TransactionsTabProps {
   loading: boolean;
@@ -27,6 +29,36 @@ export default function TransactionsTab({
   branchName,
   onDownloadCSV,
 }: TransactionsTabProps) {
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+
+  const handleDownloadPDF = () => {
+    const { headers, rows, summaryRow } = formatTransactionRows(filteredTransactions);
+    const filename = `${branchName.replace(/\s+/g, '_')}_Transactions`;
+    downloadPDF({
+      title: `${branchName} — Transactions`,
+      filename,
+      headers,
+      rows,
+      summaryRow,
+      dateRange: { from: dateFrom, to: dateTo },
+    });
+    setShowDownloadMenu(false);
+  };
+
+  const handleDownloadExcel = () => {
+    const { headers, rows, summaryRow } = formatTransactionRows(filteredTransactions);
+    const filename = `${branchName.replace(/\s+/g, '_')}_Transactions`;
+    downloadExcel({
+      title: `${branchName} — Transactions`,
+      filename,
+      headers,
+      rows,
+      summaryRow,
+      dateRange: { from: dateFrom, to: dateTo },
+    });
+    setShowDownloadMenu(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -78,13 +110,45 @@ export default function TransactionsTab({
         )}
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-slate-500">{filteredTransactions.length} transactions</span>
-          <button
-            onClick={() => onDownloadCSV(filteredTransactions, `${branchName.replace(/\s+/g, '_')}_Transactions`)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium"
-          >
-            <Download className="h-4 w-4" />
-            Download CSV
-          </button>
+          {/* Download dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-sm font-medium"
+            >
+              <Download className="h-4 w-4" />
+              Download
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            {showDownloadMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowDownloadMenu(false)} />
+                <div className="absolute right-0 mt-1 z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 w-44">
+                  <button
+                    onClick={handleDownloadPDF}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                  >
+                    <FileText className="h-4 w-4 text-red-400" />
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={handleDownloadExcel}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                  >
+                    <FileSpreadsheet className="h-4 w-4 text-green-400" />
+                    Download Excel
+                  </button>
+                  <button
+                    onClick={() => { onDownloadCSV(filteredTransactions, `${branchName.replace(/\s+/g, '_')}_Transactions`); setShowDownloadMenu(false); }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                  >
+                    <Download className="h-4 w-4 text-blue-400" />
+                    Download CSV
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
       {filteredTransactions.length === 0 ? (
