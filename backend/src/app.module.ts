@@ -17,10 +17,12 @@ import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
 import { MerchantsModule } from './merchants/merchants.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { TelegramModule } from './telegram/telegram.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     PrismaModule,
+    TelegramModule,
     AuditModule,
     AuthModule,
     UsersModule,

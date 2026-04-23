@@ -30,6 +30,10 @@ export class CreateUserDto {
   @IsString()
   phone?: string;
 
+  @IsOptional()
+  @IsString()
+  telegramChatId?: string;
+
   @IsEnum(UserRole)
   role: UserRole;
 
@@ -52,6 +56,10 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsString()
+  telegramChatId?: string;
 
   @IsOptional()
   @IsEnum(UserRole)

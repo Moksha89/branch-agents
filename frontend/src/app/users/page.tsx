@@ -35,6 +35,7 @@ interface UserItem {
   fullName: string;
   email: string | null;
   phone: string | null;
+  telegramChatId: string | null;
   role: string;
   status: string;
   lastLogin: string | null;
@@ -100,6 +101,7 @@ export default function UsersPage() {
     fullName: '',
     email: '',
     phone: '',
+    telegramChatId: '',
     role: 'EMPLOYEE' as string,
     status: 'ACTIVE' as string,
     branchAccess: [] as BranchAccessItem[],
@@ -162,6 +164,7 @@ export default function UsersPage() {
       fullName: '',
       email: '',
       phone: '',
+      telegramChatId: '',
       role: 'EMPLOYEE',
       status: 'ACTIVE',
       branchAccess: [],
@@ -178,6 +181,7 @@ export default function UsersPage() {
       fullName: user.fullName,
       email: user.email || '',
       phone: user.phone || '',
+      telegramChatId: user.telegramChatId || '',
       role: user.role,
       status: user.status,
       branchAccess: user.branchAccess.map((ba) => ({
@@ -201,6 +205,7 @@ export default function UsersPage() {
         fullName: formData.fullName,
         email: formData.email || undefined,
         phone: formData.phone || undefined,
+        telegramChatId: formData.telegramChatId || undefined,
         role: formData.role,
         branchAccess: formData.branchAccess.map((ba) => ({
           branchId: ba.branchId,
@@ -584,6 +589,25 @@ export default function UsersPage() {
                       placeholder="9876543210"
                     />
                   </div>
+                </div>
+
+                {/* Telegram Chat ID */}
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">
+                    Telegram Chat ID <span className="text-slate-500">(for OTP login)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.telegramChatId}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, telegramChatId: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. 123456789"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    User must first message <a href="https://t.me/Pb_otpbot" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">@Pb_otpbot</a> on Telegram, then enter their chat ID here. Get it via <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">@userinfobot</a>.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

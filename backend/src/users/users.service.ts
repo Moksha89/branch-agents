@@ -44,6 +44,7 @@ export class UsersService {
       fullName: u.fullName,
       email: u.email,
       phone: u.phone,
+      telegramChatId: u.telegramChatId,
       role: u.role,
       status: u.status,
       lastLogin: u.lastLogin,
@@ -78,6 +79,7 @@ export class UsersService {
       fullName: user.fullName,
       email: user.email,
       phone: user.phone,
+      telegramChatId: user.telegramChatId,
       role: user.role,
       status: user.status,
       lastLogin: user.lastLogin,
@@ -117,6 +119,7 @@ export class UsersService {
         fullName: dto.fullName,
         email: dto.email || null,
         phone: dto.phone || null,
+        telegramChatId: dto.telegramChatId || null,
         role: dto.role,
       },
     });
@@ -155,6 +158,7 @@ export class UsersService {
     if (dto.fullName) updateData.fullName = dto.fullName;
     if (dto.email !== undefined) updateData.email = dto.email || null;
     if (dto.phone !== undefined) updateData.phone = dto.phone || null;
+    if (dto.telegramChatId !== undefined) updateData.telegramChatId = dto.telegramChatId || null;
     if (dto.role) updateData.role = dto.role;
     if (dto.status) updateData.status = dto.status;
     if (dto.password) {
