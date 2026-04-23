@@ -80,7 +80,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-slate-800/90 backdrop-blur-sm border-r border-slate-700/50 transform transition-transform duration-200 ease-in-out ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 flex-shrink-0 bg-slate-800/90 backdrop-blur-sm border-r border-slate-700/50 transform transition-transform duration-200 ease-in-out ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -170,7 +170,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile header */}
         <header className="lg:hidden bg-slate-800/80 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-30">
           <div className="flex items-center gap-3 px-4 h-14">
@@ -193,7 +193,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           <NotificationBell />
         </div>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
+        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden overflow-y-auto">
           {children}
         </main>
       </div>

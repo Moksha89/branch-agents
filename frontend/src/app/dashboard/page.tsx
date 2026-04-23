@@ -173,14 +173,14 @@ export default function DashboardPage() {
 
   return (
     <Sidebar>
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="flex items-center gap-3 mb-6">
           <LayoutDashboard className="h-6 w-6 text-blue-400" />
           <h2 className="text-2xl font-bold text-white">Dashboard</h2>
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 md:mb-6">
           <KPICard icon={Building2} label="Branches" value={overview.totalBranches} color="blue" />
           <KPICard icon={Users} label="Accounts" value={overview.totalAccounts} color="green" />
           <KPICard icon={ArrowUpDown} label="Transactions" value={overview.totalTransactions} color="purple" />
@@ -212,11 +212,11 @@ export default function DashboardPage() {
         )}
 
         {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
           {/* Branch Balances */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-3 md:p-4 min-w-0">
             <h3 className="text-sm font-semibold text-white mb-3">Branch Balances</h3>
-            <div className="h-64">
+            <div className="h-56 md:h-64 min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={branchBalanceData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -235,9 +235,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Account Status Pie */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-3 md:p-4 min-w-0">
             <h3 className="text-sm font-semibold text-white mb-3">Account Status Distribution</h3>
-            <div className="h-64">
+            <div className="h-56 md:h-64 min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -264,11 +264,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
           {/* P/L Trend */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-3 md:p-4 min-w-0">
             <h3 className="text-sm font-semibold text-white mb-3">P/L Trend</h3>
-            <div className="h-64">
+            <div className="h-56 md:h-64 min-w-0">
               {plTrendData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={plTrendData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -295,9 +295,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Transaction Volume */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-3 md:p-4 min-w-0">
             <h3 className="text-sm font-semibold text-white mb-3">Transaction Volume (7 days)</h3>
-            <div className="h-64">
+            <div className="h-56 md:h-64 min-w-0">
               {txTypeData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={txTypeData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -322,9 +322,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Top Accounts & Recent Transactions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {/* Top Accounts */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-3 md:p-4 min-w-0">
             <h3 className="text-sm font-semibold text-white mb-3">Top Accounts by Balance</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -351,7 +351,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Transactions */}
-          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+          <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-3 md:p-4 min-w-0">
             <h3 className="text-sm font-semibold text-white mb-3">Recent Transactions</h3>
             <div className="space-y-2">
               {recentTransactions.map((tx) => (
@@ -410,15 +410,15 @@ function KPICard({ icon: Icon, label, value, color }: {
   };
 
   return (
-    <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
-      <div className="flex items-center gap-3 mb-2">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconBg[color]}`}>
-          <Icon className="h-5 w-5" />
+    <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 p-3 md:p-4 min-w-0">
+      <div className="flex items-center gap-2 md:gap-3 mb-2">
+        <div className={`w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center ${iconBg[color]}`}>
+          <Icon className="h-4 w-4 md:h-5 md:w-5" />
         </div>
       </div>
-      <p className="text-xs text-slate-400 mb-1">{label}</p>
-      <p className="text-xl font-bold text-white">{value}</p>
-      <div className={`h-1 w-12 rounded-full bg-gradient-to-r ${colorMap[color]} mt-2`} />
+      <p className="text-[10px] md:text-xs text-slate-400 mb-0.5 md:mb-1">{label}</p>
+      <p className="text-base md:text-xl font-bold text-white truncate">{value}</p>
+      <div className={`h-1 w-10 md:w-12 rounded-full bg-gradient-to-r ${colorMap[color]} mt-1.5 md:mt-2`} />
     </div>
   );
 }
