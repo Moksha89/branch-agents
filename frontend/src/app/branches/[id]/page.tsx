@@ -13,6 +13,7 @@ import {
   FileText,
 } from 'lucide-react';
 import Link from 'next/link';
+import { showToast } from '@/components/ui/toast';
 
 import {
   BankAccount,
@@ -366,6 +367,7 @@ export default function BranchDetailPage() {
       });
       if (res.ok) {
         closeTxModal();
+        showToast(`${txType.replace('_', ' ')} of ₹${amount.toLocaleString('en-IN')} successful`, 'success');
         await fetchBranch();
         if (popupMode === 'view' && selectedAccount) {
           fetchTransactions(selectedAccount.id);
@@ -375,10 +377,13 @@ export default function BranchDetailPage() {
         }
       } else {
         const errData = await res.json();
-        setTxError(errData.message || 'Transaction failed');
+        const msg = errData.message || 'Transaction failed';
+        setTxError(msg);
+        showToast(msg, 'error');
       }
     } catch {
       setTxError('Transaction failed');
+      showToast('Transaction failed', 'error');
     } finally {
       setTxSubmitting(false);
     }

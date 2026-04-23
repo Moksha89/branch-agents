@@ -17,6 +17,8 @@ import {
   GitBranch,
 } from 'lucide-react';
 import Sidebar from '@/components/layout/sidebar';
+import { handleEnterKeyNavigation } from '@/lib/form-utils';
+import { showToast } from '@/components/ui/toast';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -229,9 +231,12 @@ export default function UsersPage() {
       }
 
       setShowModal(false);
+      showToast(editingUser ? 'User updated successfully' : 'User created successfully', 'success');
       fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      const msg = err instanceof Error ? err.message : 'Failed to save';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setSaving(false);
     }
@@ -248,9 +253,12 @@ export default function UsersPage() {
         throw new Error(errData.message || 'Failed to delete user');
       }
       setDeleteConfirm(null);
+      showToast('User deleted successfully', 'success');
       fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete');
+      const msg = err instanceof Error ? err.message : 'Failed to delete';
+      setError(msg);
+      showToast(msg, 'error');
       setDeleteConfirm(null);
     }
   };
@@ -493,7 +501,7 @@ export default function UsersPage() {
               </div>
 
               {/* Modal Body */}
-              <div className="px-6 py-4 space-y-4">
+              <div className="px-6 py-4 space-y-4" onKeyDown={handleEnterKeyNavigation}>
                 {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>

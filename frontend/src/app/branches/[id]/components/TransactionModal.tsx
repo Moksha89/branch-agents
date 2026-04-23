@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BankAccount, AllBranch, TxType, txTypeLabel, txTypeColor, maskNumber } from './types';
+import { handleEnterKeyNavigation } from '@/lib/form-utils';
 
 interface TransactionModalProps {
   account: BankAccount;
@@ -67,9 +68,10 @@ export default function TransactionModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4" onKeyDown={handleEnterKeyNavigation}>
           {txError && (
-            <div className="p-3 bg-red-950/40 border border-red-800/50 rounded-lg text-red-300 text-sm">
+            <div className="p-3 bg-red-950/40 border border-red-800/50 rounded-lg text-red-300 text-sm flex items-center gap-2">
+              <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-red-400" />
               {txError}
             </div>
           )}
@@ -84,6 +86,7 @@ export default function TransactionModal({
               className="bg-slate-800/60 border-slate-700 text-white mt-1 text-lg"
               min="0.01"
               step="0.01"
+              autoFocus
             />
           </div>
 

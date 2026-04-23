@@ -2,6 +2,7 @@
 
 import { CalendarDays, Download, FileText, TrendingUp, TrendingDown } from 'lucide-react';
 import { DailyReport } from './types';
+import { handleEnterKeyNavigation } from '@/lib/form-utils';
 
 interface DailyReportsTabProps {
   loading: boolean;
@@ -71,7 +72,7 @@ export default function DailyReportsTab({
               {reportError}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4" onKeyDown={handleEnterKeyNavigation}>
             <div>
               <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Date</label>
               <input

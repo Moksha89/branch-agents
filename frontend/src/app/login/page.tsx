@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
+import { handleEnterKeyNavigation } from '@/lib/form-utils';
+import { showToast } from '@/components/ui/toast';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,15 +34,20 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || 'Invalid username or password');
+        const msg = data.message || 'Invalid username or password';
+        setError(msg);
+        showToast(msg, 'error');
         return;
       }
 
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('user', JSON.stringify(data.user));
+      showToast('Login successful', 'success');
       router.push('/dashboard');
     } catch {
-      setError('Unable to connect to server. Please try again.');
+      const msg = 'Unable to connect to server. Please try again.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }

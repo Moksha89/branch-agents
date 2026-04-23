@@ -25,6 +25,9 @@ import {
   Camera,
 } from 'lucide-react';
 import Link from 'next/link';
+import { handleEnterKeyNavigation, validateField } from '@/lib/form-utils';
+import { showToast } from '@/components/ui/toast';
+import { FieldError } from '@/components/ui/field-error';
 
 interface MerchantEntry {
   name: string;
@@ -82,6 +85,7 @@ export default function NewBankAccountPage() {
   const [debitCardPhotoBackPreview, setDebitCardPhotoBackPreview] = useState<string | null>(null);
 
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
 
   // Merchants
   const [merchants, setMerchants] = useState<MerchantEntry[]>([]);
@@ -124,6 +128,15 @@ export default function NewBankAccountPage() {
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    // Clear field error on change
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: null }));
+    }
+  };
+
+  const handleFieldBlur = (field: string, value: string, required = false) => {
+    const error = validateField(field, value, required);
+    setFieldErrors((prev) => ({ ...prev, [field]: error }));
   };
 
   const checkDuplicate = async (accountNumber: string) => {
@@ -253,13 +266,18 @@ export default function NewBankAccountPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.message || 'Failed to create bank account');
+        const msg = data.message || 'Failed to create bank account';
+        setError(msg);
+        showToast(msg, 'error');
         return;
       }
 
+      showToast('Bank account created successfully', 'success');
       router.push(`/branches/${branchId}`);
     } catch {
-      setError('Failed to create bank account. Please try again.');
+      const msg = 'Failed to create bank account. Please try again.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -339,7 +357,7 @@ export default function NewBankAccountPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8" onKeyDown={handleEnterKeyNavigation}>
           {/* Personal Information */}
           <section className="rounded-xl bg-slate-800/50 border border-slate-700/50 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-700/50 flex items-center gap-3">
@@ -365,10 +383,12 @@ export default function NewBankAccountPage() {
                     <Input
                       value={form.mobileNumber}
                       onChange={(e) => updateField('mobileNumber', e.target.value)}
+                      onBlur={(e) => handleFieldBlur('mobileNumber', e.target.value, true)}
                       placeholder="Enter mobile number"
                       required
-                      className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                      className={`pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 ${fieldErrors.mobileNumber ? 'border-red-500/50' : ''}`}
                     />
+                    <FieldError error={fieldErrors.mobileNumber} />
                   </div>
                 </div>
               </div>
@@ -379,10 +399,12 @@ export default function NewBankAccountPage() {
                   <Input
                     value={form.aadharLinkedNumber}
                     onChange={(e) => updateField('aadharLinkedNumber', e.target.value)}
+                    onBlur={(e) => handleFieldBlur('aadharLinkedNumber', e.target.value, true)}
                     placeholder="Enter Aadhar linked mobile number"
                     required
-                    className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className={`pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 ${fieldErrors.aadharLinkedNumber ? 'border-red-500/50' : ''}`}
                   />
+                  <FieldError error={fieldErrors.aadharLinkedNumber} />
                 </div>
               </div>
             </div>
@@ -429,10 +451,12 @@ export default function NewBankAccountPage() {
                   <Input
                     value={form.ifscCode}
                     onChange={(e) => updateField('ifscCode', e.target.value.toUpperCase())}
+                    onBlur={(e) => handleFieldBlur('ifscCode', e.target.value, true)}
                     placeholder="e.g. SBIN0001234"
                     required
-                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className={`bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 ${fieldErrors.ifscCode ? 'border-red-500/50' : ''}`}
                   />
+                  <FieldError error={fieldErrors.ifscCode} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Branch *</Label>
@@ -514,9 +538,10 @@ export default function NewBankAccountPage() {
                   <Input
                     value={form.panCardNumber}
                     onChange={(e) => updateField('panCardNumber', e.target.value.toUpperCase())}
+                    onBlur={(e) => handleFieldBlur('panCardNumber', e.target.value, true)}
                     placeholder="e.g. ABCDE1234F"
                     required
-                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className={`bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 ${fieldErrors.panCardNumber ? 'border-red-500/50' : ''}`}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

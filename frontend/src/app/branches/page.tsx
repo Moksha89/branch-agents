@@ -14,6 +14,8 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { handleEnterKeyNavigation } from '@/lib/form-utils';
+import { showToast } from '@/components/ui/toast';
 
 interface Branch {
   id: string;
@@ -90,14 +92,18 @@ export default function BranchesPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.message || 'Failed to create branch');
+        const msg = data.message || 'Failed to create branch';
+        setError(msg);
+        showToast(msg, 'error');
         return;
       }
       setShowCreate(false);
       setBranchName('');
+      showToast('Branch created successfully', 'success');
       await fetchBranches();
     } catch {
       setError('Failed to create branch');
+      showToast('Failed to create branch', 'error');
     } finally {
       setCreating(false);
     }
@@ -140,7 +146,7 @@ export default function BranchesPage() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <form onSubmit={handleCreate} className="p-6 space-y-4">
+              <form onSubmit={handleCreate} className="p-6 space-y-4" onKeyDown={handleEnterKeyNavigation}>
                 <div className="space-y-2">
                   <Label className="text-slate-300">Branch Name *</Label>
                   <Input
