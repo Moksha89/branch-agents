@@ -6,17 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { User, Loader2, Send, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { User, Lock, Loader2, ShieldCheck, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { showToast } from '@/components/ui/toast';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
-type LoginStep = 'username' | 'otp';
+type LoginStep = 'password' | 'otp';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<LoginStep>('username');
+  const [step, setStep] = useState<LoginStep>('password');
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,34 +32,43 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  const handleRequestOtp = async (e?: React.FormEvent) => {
+  const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!username.trim()) return;
+    if (!username.trim() || !password) return;
     setError('');
     setLoading(true);
 
     try {
-      const res = await fetch(`${API}/api/auth/request-otp`, {
+      const res = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim() }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        const msg = data.message || 'Failed to send OTP';
+        const msg = data.message || 'Login failed';
         setError(msg);
         showToast(msg, 'error');
         return;
       }
 
-      showToast('OTP sent to your Telegram!', 'success');
-      setStep('otp');
-      setCountdown(data.expiresIn || 300);
-      setOtpDigits(['', '', '', '', '', '']);
-      // Focus first OTP input after render
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      // Check if 2FA OTP is required
+      if (data.requireOtp) {
+        showToast('OTP sent to your Telegram!', 'success');
+        setStep('otp');
+        setCountdown(300);
+        setOtpDigits(['', '', '', '', '', '']);
+        setTimeout(() => otpRefs.current[0]?.focus(), 100);
+        return;
+      }
+
+      // No 2FA — login directly
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      showToast('Login successful', 'success');
+      router.push('/dashboard');
     } catch {
       const msg = 'Unable to connect to server. Please try again.';
       setError(msg);
@@ -86,7 +97,6 @@ export default function LoginPage() {
         const msg = data.message || 'Invalid OTP';
         setError(msg);
         showToast(msg, 'error');
-        // Clear OTP fields on error
         setOtpDigits(['', '', '', '', '', '']);
         setTimeout(() => otpRefs.current[0]?.focus(), 100);
         return;
@@ -105,23 +115,53 @@ export default function LoginPage() {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (countdown > 0 || loading) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${API}/api/auth/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const msg = data.message || 'Failed to resend OTP';
+        setError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+
+      showToast('OTP resent to your Telegram!', 'success');
+      setCountdown(data.expiresIn || 300);
+      setOtpDigits(['', '', '', '', '', '']);
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    } catch {
+      const msg = 'Unable to connect to server.';
+      setError(msg);
+      showToast(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOtpChange = (index: number, value: string) => {
-    // Only allow digits
     const digit = value.replace(/\D/g, '').slice(-1);
     const newDigits = [...otpDigits];
     newDigits[index] = digit;
     setOtpDigits(newDigits);
 
-    // Auto-focus next input
     if (digit && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all 6 digits are entered
     if (digit && index === 5) {
       const code = newDigits.join('');
       if (code.length === 6) {
-        // Small delay to let state update
         setTimeout(() => handleVerifyOtp(), 100);
       }
     }
@@ -173,19 +213,21 @@ export default function LoginPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Systematic Web</h1>
-          <p className="text-slate-400 mt-2">Sign in with Telegram OTP</p>
+          <p className="text-slate-400 mt-2">
+            {step === 'password' ? 'Sign in to your account' : 'Two-Factor Authentication'}
+          </p>
         </div>
 
         {/* Login Card */}
         <Card className="border-slate-700/50 bg-slate-800/50 backdrop-blur-xl shadow-2xl">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-xl text-white text-center">
-              {step === 'username' ? 'Welcome back' : 'Enter OTP'}
+              {step === 'password' ? 'Welcome back' : 'Enter OTP'}
             </CardTitle>
             <CardDescription className="text-slate-400 text-center">
-              {step === 'username'
-                ? 'Enter your username to receive OTP on Telegram'
-                : `OTP sent to Telegram for ${username}`}
+              {step === 'password'
+                ? 'Enter your credentials to continue'
+                : `OTP sent to your Telegram for ${username}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,9 +238,9 @@ export default function LoginPage() {
               </div>
             )}
 
-            {step === 'username' ? (
-              /* Step 1: Username */
-              <form onSubmit={handleRequestOtp} className="space-y-4">
+            {step === 'password' ? (
+              /* Step 1: Username + Password */
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-slate-300">
                     Username
@@ -219,44 +261,59 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-slate-300">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus-visible:ring-blue-500/50 focus-visible:border-blue-500/50"
+                      required
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
                 <Button
                   type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium h-11 transition-all duration-200"
-                  disabled={loading || !username.trim()}
+                  disabled={loading || !username.trim() || !password}
                 >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending OTP...
+                      Signing in...
                     </>
                   ) : (
                     <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send OTP to Telegram
+                      <Lock className="mr-2 h-4 w-4" />
+                      Sign In
                     </>
                   )}
                 </Button>
 
-                {/* Telegram bot link helper */}
                 <div className="text-center">
                   <p className="text-xs text-slate-500">
-                    First time? Message{' '}
-                    <a
-                      href="https://t.me/Pb_otpbot"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 underline"
-                    >
-                      @Pb_otpbot
-                    </a>{' '}
-                    on Telegram, then ask admin to link your account.
+                    Telegram 2FA enabled? You&apos;ll receive an OTP after password verification.
                   </p>
                 </div>
               </form>
             ) : (
-              /* Step 2: OTP Verification */
+              /* Step 2: OTP Verification (2FA) */
               <div className="space-y-6">
-                {/* Telegram icon indicator */}
                 <div className="flex justify-center">
                   <div className="w-14 h-14 rounded-full bg-blue-500/20 flex items-center justify-center">
                     <ShieldCheck className="h-7 w-7 text-blue-400" />
@@ -309,14 +366,14 @@ export default function LoginPage() {
                 {/* Actions */}
                 <div className="flex items-center justify-between">
                   <button
-                    onClick={() => { setStep('username'); setError(''); setOtpDigits(['', '', '', '', '', '']); }}
+                    onClick={() => { setStep('password'); setError(''); setOtpDigits(['', '', '', '', '', '']); setPassword(''); }}
                     className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
-                    Change username
+                    Back to login
                   </button>
                   <button
-                    onClick={() => { if (countdown <= 0) handleRequestOtp(); }}
+                    onClick={handleResendOtp}
                     disabled={countdown > 0 || loading}
                     className={`text-sm transition-colors ${
                       countdown > 0 ? 'text-slate-600 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'

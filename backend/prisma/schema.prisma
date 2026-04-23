@@ -252,3 +252,16 @@ model Otp {
   @@index([expiresAt])
   @@map("otps")
 }
+
+model TelegramLinkCode {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  code        String   @unique
+  expiresAt   DateTime @map("expires_at")
+  used        Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([code])
+  @@map("telegram_link_codes")
+}

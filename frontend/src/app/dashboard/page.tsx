@@ -10,6 +10,11 @@ import {
   Users,
   ArrowUpDown,
   IndianRupee,
+  ShieldCheck,
+  ShieldOff,
+  Copy,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import {
   BarChart,
@@ -92,6 +97,28 @@ const formatINR = (n: number) =>
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [telegramStatus, setTelegramStatus] = useState<{ linked: boolean; chatId: string | null } | null>(null);
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkPolling, setLinkPolling] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const getToken = () => localStorage.getItem('accessToken') || '';
+
+  const fetchTelegramStatus = () => {
+    fetch(`${API}/api/auth/telegram/status`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        setTelegramStatus(d);
+        if (d.linked && linkPolling) {
+          setLinkPolling(false);
+          setLinkCode(null);
+        }
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -103,7 +130,61 @@ export default function DashboardPage() {
       .then((d) => setStats(d))
       .catch(() => {})
       .finally(() => setLoading(false));
+    fetchTelegramStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Poll for link status when waiting for user to send code to bot
+  useEffect(() => {
+    if (!linkPolling) return;
+    const interval = setInterval(fetchTelegramStatus, 3000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkPolling]);
+
+  const handleGenerateLinkCode = async () => {
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`${API}/api/auth/telegram/generate-link`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.message || 'Failed to generate link code');
+        return;
+      }
+      setLinkCode(data.code);
+      setLinkPolling(true);
+    } catch {
+      alert('Failed to connect to server');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleUnlinkTelegram = async () => {
+    if (!confirm('Remove Telegram 2FA? You will no longer need OTP to login.')) return;
+    try {
+      const res = await fetch(`${API}/api/auth/telegram/unlink`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) {
+        setTelegramStatus({ linked: false, chatId: null });
+        setLinkCode(null);
+        setLinkPolling(false);
+      }
+    } catch {
+      alert('Failed to unlink');
+    }
+  };
+
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
   if (loading) {
     return (
@@ -176,6 +257,85 @@ export default function DashboardPage() {
           <KPICard icon={ArrowUpDown} label="Transactions" value={overview.totalTransactions} color="purple" />
           <KPICard icon={IndianRupee} label="Total Balance" value={formatINR(overview.totalBalance)} color="orange" />
         </div>
+
+        {/* Telegram 2FA Card */}
+        {telegramStatus && (
+          <div className="mb-6 rounded-xl bg-slate-800/50 border border-slate-700/50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  telegramStatus.linked ? 'bg-green-500/15 text-green-400' : 'bg-amber-500/15 text-amber-400'
+                }`}>
+                  {telegramStatus.linked ? <ShieldCheck className="h-5 w-5" /> : <ShieldOff className="h-5 w-5" />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">
+                    Telegram 2FA {telegramStatus.linked ? '(Active)' : '(Not Set Up)'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {telegramStatus.linked
+                      ? `Linked to Telegram (${telegramStatus.chatId}). OTP required on every login.`
+                      : 'Add an extra layer of security with Telegram OTP verification.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {telegramStatus.linked ? (
+                  <button
+                    onClick={handleUnlinkTelegram}
+                    className="px-3 py-1.5 text-xs bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 transition-colors"
+                  >
+                    Remove 2FA
+                  </button>
+                ) : linkCode ? (
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400 mb-1">Send this code to the bot:</p>
+                      <div className="flex items-center gap-2">
+                        <code className="px-3 py-1.5 bg-slate-900 border border-blue-500/30 rounded-lg text-blue-400 font-mono text-lg font-bold tracking-widest">
+                          {linkCode}
+                        </code>
+                        <button
+                          onClick={() => copyCode(linkCode)}
+                          className="p-1.5 rounded-md hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                          title="Copy code"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {codeCopied && <p className="text-xs text-green-400 mt-1">Copied!</p>}
+                    </div>
+                    <a
+                      href="https://t.me/Pb_otpbot"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-500/15 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/25 transition-colors"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open @Pb_otpbot
+                    </a>
+                    {linkPolling && (
+                      <div className="flex items-center gap-1 text-xs text-slate-400">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Waiting...
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGenerateLinkCode}
+                    disabled={linkLoading}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {linkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                    Link Telegram 2FA
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">

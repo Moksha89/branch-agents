@@ -5,7 +5,7 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { LoginDto } from './dto/login.dto';
-import { RequestOtpDto, VerifyOtpDto } from './dto/otp.dto';
+import { VerifyOtpDto } from './dto/otp.dto';
 
 @Injectable()
 export class AuthService {
@@ -38,63 +38,44 @@ export class AuthService {
       throw new UnauthorizedException('Invalid username or password');
     }
 
+    // If user has Telegram 2FA linked, send OTP instead of logging in directly
+    if (user.telegramChatId) {
+      // Generate and send OTP
+      await this.prisma.otp.updateMany({
+        where: { userId: user.id, used: false },
+        data: { used: true },
+      });
+
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+      await this.prisma.otp.create({
+        data: { userId: user.id, code, expiresAt },
+      });
+
+      const sent = await this.telegram.sendOtp(user.telegramChatId, code, user.username);
+
+      if (!sent) {
+        // If Telegram send fails, fall back to password-only login
+        this.audit.logAuth('OTP_SEND_FAILED_FALLBACK', loginDto.username, true);
+        await this.usersService.updateLastLogin(user.id);
+        return this.generateLoginResponse(user);
+      }
+
+      this.audit.logAuth('OTP_SENT_2FA', loginDto.username, true);
+
+      return {
+        requireOtp: true,
+        message: 'OTP sent to your Telegram. Please enter the code to continue.',
+        username: user.username,
+      };
+    }
+
+    // No 2FA — login directly
     await this.usersService.updateLastLogin(user.id);
     this.audit.logAuth('LOGIN_SUCCESS', loginDto.username, true);
 
     return this.generateLoginResponse(user);
-  }
-
-  async requestOtp(dto: RequestOtpDto) {
-    const user = await this.usersService.findByUsername(dto.username);
-
-    if (!user) {
-      // Don't reveal if user exists
-      throw new BadRequestException('Unable to send OTP. Please check your username.');
-    }
-
-    if (user.status !== 'ACTIVE') {
-      throw new BadRequestException('Account is not active');
-    }
-
-    if (!user.telegramChatId) {
-      throw new BadRequestException(
-        'Telegram is not linked to this account. Please contact admin to set up your Telegram Chat ID.',
-      );
-    }
-
-    // Invalidate any existing unused OTPs for this user
-    await this.prisma.otp.updateMany({
-      where: { userId: user.id, used: false },
-      data: { used: true },
-    });
-
-    // Generate 6-digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
-    await this.prisma.otp.create({
-      data: {
-        userId: user.id,
-        code,
-        expiresAt,
-      },
-    });
-
-    // Send OTP via Telegram
-    const sent = await this.telegram.sendOtp(user.telegramChatId, code, user.username);
-
-    if (!sent) {
-      throw new BadRequestException(
-        'Failed to send OTP via Telegram. Please ensure you have started a chat with the bot.',
-      );
-    }
-
-    this.audit.logAuth('OTP_SENT', dto.username, true);
-
-    return {
-      message: 'OTP sent to your Telegram',
-      expiresIn: 300, // 5 minutes in seconds
-    };
   }
 
   async verifyOtp(dto: VerifyOtpDto) {
@@ -109,7 +90,6 @@ export class AuthService {
       throw new UnauthorizedException('Account is not active');
     }
 
-    // Find valid OTP
     const otp = await this.prisma.otp.findFirst({
       where: {
         userId: user.id,
@@ -125,7 +105,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired OTP');
     }
 
-    // Mark OTP as used
     await this.prisma.otp.update({
       where: { id: otp.id },
       data: { used: true },
@@ -137,7 +116,103 @@ export class AuthService {
     return this.generateLoginResponse(user);
   }
 
-  private async generateLoginResponse(user: { id: string; username: string; fullName: string; role: string; avatar: string | null }) {
+  async resendOtp(username: string) {
+    const user = await this.usersService.findByUsername(username);
+
+    if (!user || !user.telegramChatId) {
+      throw new BadRequestException('Unable to resend OTP');
+    }
+
+    // Invalidate existing
+    await this.prisma.otp.updateMany({
+      where: { userId: user.id, used: false },
+      data: { used: true },
+    });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await this.prisma.otp.create({
+      data: { userId: user.id, code, expiresAt },
+    });
+
+    const sent = await this.telegram.sendOtp(user.telegramChatId, code, user.username);
+
+    if (!sent) {
+      throw new BadRequestException('Failed to send OTP. Please try again.');
+    }
+
+    return { message: 'OTP resent to your Telegram', expiresIn: 300 };
+  }
+
+  async generateLinkCode(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.telegramChatId) {
+      throw new BadRequestException('Telegram is already linked to this account');
+    }
+
+    // Invalidate existing unused codes
+    await this.prisma.telegramLinkCode.updateMany({
+      where: { userId, used: false },
+      data: { used: true },
+    });
+
+    // Generate random code: SW-XXXXXX (6 uppercase alphanumeric chars)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I,O,0,1 for clarity
+    let code = 'SW-';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await this.prisma.telegramLinkCode.create({
+      data: { userId, code, expiresAt },
+    });
+
+    return {
+      code,
+      expiresIn: 600,
+      botUsername: 'Pb_otpbot',
+      instructions: `Send this code to @Pb_otpbot on Telegram: ${code}`,
+    };
+  }
+
+  async getTelegramStatus(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return {
+      linked: !!user.telegramChatId,
+      chatId: user.telegramChatId ? `***${user.telegramChatId.slice(-4)}` : null,
+    };
+  }
+
+  async unlinkTelegram(userId: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (!user.telegramChatId) {
+      throw new BadRequestException('Telegram is not linked');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { telegramChatId: null },
+    });
+
+    return { message: 'Telegram 2FA has been unlinked' };
+  }
+
+  private async generateLoginResponse(user: { id: string; username: string; fullName: string; role: string; avatar: string | null; telegramChatId?: string | null }) {
     const branchAccess = await this.prisma.branchAccess.findMany({
       where: { userId: user.id },
       include: { branch: { select: { id: true, name: true, code: true } } },
@@ -156,6 +231,7 @@ export class AuthService {
         fullName: user.fullName,
         role: user.role,
         avatar: user.avatar,
+        telegramLinked: !!user.telegramChatId,
         branchAccess: branchAccess.map((ba) => ({
           branchId: ba.branchId,
           branchName: ba.branch.name,
