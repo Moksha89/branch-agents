@@ -25,8 +25,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  // Serve uploaded files
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  // Serve uploaded files (multer saves to ./uploads relative to CWD)
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download, Camera } from 'lucide-react';
+import { useState } from 'react';
+import { X, Pencil, Trash2, User, Landmark, Shield, Wallet, Globe, IndianRupee, Download, Camera, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,7 +75,37 @@ export default function AccountDetailPopup({
   onViewMode,
   onDownloadCSV,
 }: AccountDetailPopupProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+
+  const openPreview = (url: string, title: string) => {
+    setPreviewUrl(url);
+    setPreviewTitle(title);
+  };
+
+  const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
+
   return (
+    <>
+      {/* Image/PDF Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4" onClick={() => setPreviewUrl(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-white font-medium text-lg">{previewTitle}</h3>
+              <button onClick={() => setPreviewUrl(null)} className="text-white/70 hover:text-white bg-white/10 rounded-full p-2 hover:bg-white/20 transition">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {isPdf(previewUrl) ? (
+              <iframe src={previewUrl} className="w-full h-[80vh] rounded-lg border border-slate-600" />
+            ) : (
+              <img src={previewUrl} alt={previewTitle} className="max-w-full max-h-[80vh] mx-auto rounded-lg shadow-2xl object-contain" />
+            )}
+          </div>
+        </div>
+      )}
+
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
@@ -205,25 +236,45 @@ export default function AccountDetailPopup({
                     {account.aadharPhoto && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Aadhar Front</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhoto}`} alt="Aadhar Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhoto}`, '_blank')} />
+                        <div className="relative group">
+                          <img src={account.aadharPhoto} alt="Aadhar Front" className="h-16 w-auto rounded border border-slate-600" />
+                          <button onClick={() => openPreview(account.aadharPhoto!, 'Aadhar Front')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
+                            <Eye className="h-5 w-5 text-white" />
+                          </button>
+                        </div>
                       </div>
                     )}
                     {account.aadharPhotoBack && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Aadhar Back</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhotoBack}`} alt="Aadhar Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.aadharPhotoBack}`, '_blank')} />
+                        <div className="relative group">
+                          <img src={account.aadharPhotoBack} alt="Aadhar Back" className="h-16 w-auto rounded border border-slate-600" />
+                          <button onClick={() => openPreview(account.aadharPhotoBack!, 'Aadhar Back')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
+                            <Eye className="h-5 w-5 text-white" />
+                          </button>
+                        </div>
                       </div>
                     )}
                     {account.panCardPhoto && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> PAN Front</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhoto}`} alt="PAN Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhoto}`, '_blank')} />
+                        <div className="relative group">
+                          <img src={account.panCardPhoto} alt="PAN Front" className="h-16 w-auto rounded border border-slate-600" />
+                          <button onClick={() => openPreview(account.panCardPhoto!, 'PAN Front')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
+                            <Eye className="h-5 w-5 text-white" />
+                          </button>
+                        </div>
                       </div>
                     )}
                     {account.panCardPhotoBack && (
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> PAN Back</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhotoBack}`} alt="PAN Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.panCardPhotoBack}`, '_blank')} />
+                        <div className="relative group">
+                          <img src={account.panCardPhotoBack} alt="PAN Back" className="h-16 w-auto rounded border border-slate-600" />
+                          <button onClick={() => openPreview(account.panCardPhotoBack!, 'PAN Back')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
+                            <Eye className="h-5 w-5 text-white" />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -248,12 +299,22 @@ export default function AccountDetailPopup({
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="space-y-1">
                         <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Front</span>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhoto}`} alt="Debit Card Front" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhoto}`, '_blank')} />
+                        <div className="relative group">
+                          <img src={account.debitCardPhoto} alt="Debit Card Front" className="h-16 w-auto rounded border border-slate-600" />
+                          <button onClick={() => openPreview(account.debitCardPhoto!, 'Debit Card Front')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
+                            <Eye className="h-5 w-5 text-white" />
+                          </button>
+                        </div>
                       </div>
                       {account.debitCardPhotoBack && (
                         <div className="space-y-1">
                           <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Back</span>
-                          <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`, '_blank')} />
+                          <div className="relative group">
+                            <img src={account.debitCardPhotoBack} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600" />
+                            <button onClick={() => openPreview(account.debitCardPhotoBack!, 'Debit Card Back')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
+                              <Eye className="h-5 w-5 text-white" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -263,7 +324,12 @@ export default function AccountDetailPopup({
                   <div className="pt-2 border-t border-slate-700/30">
                     <div className="space-y-1">
                       <span className="text-xs text-slate-500 flex items-center gap-1"><Camera className="h-3 w-3" /> Debit Card Back</span>
-                      <img src={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600 cursor-pointer hover:opacity-80" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL ?? ''}${account.debitCardPhotoBack}`, '_blank')} />
+                      <div className="relative group">
+                        <img src={account.debitCardPhotoBack} alt="Debit Card Back" className="h-16 w-auto rounded border border-slate-600" />
+                        <button onClick={() => openPreview(account.debitCardPhotoBack!, 'Debit Card Back')} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded">
+                          <Eye className="h-5 w-5 text-white" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -576,5 +642,6 @@ export default function AccountDetailPopup({
         )}
       </div>
     </div>
+    </>
   );
 }

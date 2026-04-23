@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, FileText, Download, X, File, Image } from 'lucide-react';
+import { Plus, Trash2, FileText, Download, X, File, Image, Eye } from 'lucide-react';
 import { AccountDocument } from './types';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -276,12 +276,31 @@ export default function DocumentsSection({ accountId, readOnly }: DocumentsSecti
 
               {/* Actions */}
               <div className="flex items-center gap-1 flex-shrink-0">
+                {isImage(doc.mimeType) ? (
+                  <button
+                    onClick={() => setImagePreview(`${API}${doc.filePath}`)}
+                    className="p-1.5 text-slate-500 hover:text-teal-400 transition-colors"
+                    title="Preview"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <a
+                    href={`${API}${doc.filePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 text-slate-500 hover:text-teal-400 transition-colors"
+                    title="View"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </a>
+                )}
                 <a
                   href={`${API}${doc.filePath}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors"
-                  title="Download / View"
+                  title="Download"
                 >
                   <Download className="h-3.5 w-3.5" />
                 </a>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, QrCode, Smartphone, IndianRupee, Pencil, X, Image } from 'lucide-react';
+import { Plus, Trash2, QrCode, Smartphone, IndianRupee, Pencil, X, Image, Eye } from 'lucide-react';
 import { Merchant } from './types';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -298,10 +298,13 @@ export default function MerchantsSection({ accountId, readOnly }: MerchantsSecti
                 {m.qrCodePhoto ? (
                   <button
                     onClick={() => setQrPreview(`${API}${m.qrCodePhoto}`)}
-                    className="w-10 h-10 rounded-lg overflow-hidden border border-slate-600 hover:border-pink-400 transition-colors"
+                    className="relative group w-10 h-10 rounded-lg overflow-hidden border border-slate-600 hover:border-pink-400 transition-colors"
                     title="View QR Code"
                   >
                     <img src={`${API}${m.qrCodePhoto}`} alt="QR" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                      <Eye className="h-4 w-4 text-white" />
+                    </div>
                   </button>
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-slate-700/50 flex items-center justify-center">
