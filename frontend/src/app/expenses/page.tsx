@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDate, formatDateTime, formatTime } from '@/lib/format-date';
 import {
   Receipt,
   Plus,
@@ -522,16 +523,9 @@ export default function ExpensesPage() {
                   {filteredExpenses.map((exp) => (
                     <tr key={exp.id} className="hover:bg-slate-700/20 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap text-slate-300">
-                        {new Date(exp.createdAt).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {formatDate(exp.createdAt)}
                         <div className="text-xs text-slate-500">
-                          {new Date(exp.createdAt).toLocaleTimeString('en-IN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatTime(exp.createdAt)}
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">

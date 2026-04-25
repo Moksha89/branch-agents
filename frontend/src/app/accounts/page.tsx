@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '@/components/layout/sidebar';
 import { showToast } from '@/components/ui/toast';
+import Pagination from '@/components/ui/pagination';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -90,6 +91,8 @@ export default function AccountsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
 
   const getToken = () => localStorage.getItem('accessToken');
 
@@ -129,6 +132,11 @@ export default function AccountsPage() {
       setBranches(data);
     } catch { /* ignore */ }
   }, []);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, filterBranchId, debouncedSearch]);
 
   // Debounce search input
   useEffect(() => {
@@ -301,7 +309,9 @@ export default function AccountsPage() {
                   : 'Create accounts from the Branches page'}
             </p>
           </div>
-        ) : (
+        ) : (() => {
+          const paginatedAccounts = accounts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+          return (
           <>
             {/* Desktop Table */}
             <div className="hidden md:block bg-slate-800/30 border border-slate-700/50 rounded-xl overflow-hidden">
@@ -318,7 +328,7 @@ export default function AccountsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/30">
-                    {accounts.map((account) => (
+                    {paginatedAccounts.map((account) => (
                       <tr key={account.id} className="hover:bg-slate-700/20 transition-colors">
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-white">{account.fullName}</p>
@@ -350,11 +360,17 @@ export default function AccountsPage() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={currentPage}
+                totalItems={accounts.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-3">
-              {accounts.map((account) => (
+              {paginatedAccounts.map((account) => (
                 <div key={account.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="min-w-0">
@@ -384,15 +400,16 @@ export default function AccountsPage() {
                   </div>
                 </div>
               ))}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={accounts.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </>
-        )}
-
-        {/* Results count */}
-        {!loading && accounts.length > 0 && (
-          <p className="text-xs text-slate-500 mt-4 text-center">
-            Showing {accounts.length} account{accounts.length !== 1 ? 's' : ''}
-          </p>
+          );
+        })()
         )}
       </div>
     </Sidebar>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { formatDateTimeShort, formatDateTime } from '@/lib/format-date';
 import { useRouter } from 'next/navigation';
 import {
   Users,
@@ -401,18 +402,18 @@ export default function UsersPage() {
                   <div className="flex items-center gap-1">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border ${roleColors[user.role] || roleColors.EMPLOYEE}`}>
                       <RoleIcon role={user.role} />
-                      {user.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      {user.role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
                     </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                   <div>
                     <span className="text-slate-500">Status:</span>{' '}
-                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${statusColors[user.status] || statusColors.ACTIVE}`}>{user.status}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${statusColors[user.status] || statusColors.ACTIVE}`}>{user.status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}</span>
                   </div>
                   <div>
                     <span className="text-slate-500">Last Login:</span>{' '}
-                    <span className="text-slate-300">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Never'}</span>
+                    <span className="text-slate-300">{user.lastLogin ? formatDateTimeShort(user.lastLogin) : 'Never'}</span>
                   </div>
                   <div className="col-span-2">
                     <span className="text-slate-500">Access:</span>{' '}
@@ -523,7 +524,7 @@ export default function UsersPage() {
                       </td>
                       <td className="py-3 px-4 text-slate-400 text-xs">
                         {user.lastLogin
-                          ? new Date(user.lastLogin).toLocaleString()
+                          ? formatDateTime(user.lastLogin)
                           : 'Never'}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -753,7 +754,7 @@ export default function UsersPage() {
                     >
                       {ROLES.map((r) => (
                         <option key={r} value={r}>
-                          {r.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                          {r.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
                         </option>
                       ))}
                     </select>

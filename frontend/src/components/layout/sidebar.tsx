@@ -146,8 +146,8 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
                 <p className="text-sm font-medium text-white truncate">
                   {user.fullName}
                 </p>
-                <p className="text-xs text-slate-400 capitalize truncate">
-                  {user.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                <p className="text-xs text-slate-400 truncate">
+                  {user.role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
                 </p>
               </div>
               <Settings className={`h-4 w-4 flex-shrink-0 ${

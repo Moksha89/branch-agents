@@ -9,6 +9,7 @@ import { BankAccount, AccountStatus, Transaction, STATUS_CONFIG } from './types'
 import TransactionTable from './TransactionTable';
 import MerchantsSection from './MerchantsSection';
 import DocumentsSection from './DocumentsSection';
+import { formatDate } from '@/lib/format-date';
 import { downloadPDF, downloadExcel, formatTransactionRows } from '@/lib/download-utils';
 
 interface Branch {
@@ -544,11 +545,7 @@ export default function AccountDetailPopup({
             {/* Meta */}
             <div className="text-xs text-slate-500 pt-2 border-t border-slate-700/30">
               Created by {account.createdBy.fullName} on{' '}
-              {new Date(account.createdAt).toLocaleDateString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              })}
+              {formatDate(account.createdAt)}
             </div>
           </div>
         )}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Transaction, txTypeBadge, txTypeShort } from './types';
+import { formatDateTime } from '@/lib/format-date';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -87,8 +88,7 @@ export default function TransactionTable({ txList, contextAccountId, onReversalC
                 <div className="flex justify-between">
                   <span className="text-slate-400">Date:</span>
                   <span className="text-slate-500">
-                    {new Date(tx.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}{' '}
-                    {new Date(tx.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {formatDateTime(tx.createdAt)}
                   </span>
                 </div>
               </div>
@@ -152,15 +152,7 @@ export default function TransactionTable({ txList, contextAccountId, onReversalC
                       {tx.description || '—'}
                     </td>
                     <td className="p-3 text-slate-500 whitespace-nowrap">
-                      {new Date(tx.createdAt).toLocaleDateString('en-IN', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}{' '}
-                      {new Date(tx.createdAt).toLocaleTimeString('en-IN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatDateTime(tx.createdAt)}
                     </td>
                     <td className="p-3 text-center">
                       {!isReversal && (

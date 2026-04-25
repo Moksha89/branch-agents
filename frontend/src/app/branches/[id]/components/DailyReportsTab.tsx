@@ -3,6 +3,7 @@
 import { CalendarDays, Download, FileText, TrendingUp, TrendingDown } from 'lucide-react';
 import { DailyReport } from './types';
 import { handleEnterKeyNavigation } from '@/lib/form-utils';
+import { formatDate } from '@/lib/format-date';
 
 interface DailyReportsTabProps {
   loading: boolean;
@@ -182,7 +183,7 @@ export default function DailyReportsTab({
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 text-slate-500" />
                   <span className="text-slate-200 font-medium text-sm">
-                    {new Date(report.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {formatDate(report.date)}
                   </span>
                 </div>
                 <span className={`text-sm font-bold ${report.profitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -266,7 +267,7 @@ export default function DailyReportsTab({
                     <td className="px-4 py-3 text-slate-200 border-r border-slate-700/30 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <CalendarDays className="h-3.5 w-3.5 text-slate-500" />
-                        {new Date(report.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {formatDate(report.date)}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right text-green-400 font-medium border-r border-slate-700/30">
