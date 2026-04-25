@@ -13,7 +13,7 @@ import {
   FileText,
 } from 'lucide-react';
 import Link from 'next/link';
-import { showToast } from '@/components/ui/toast';
+import { showToast as globalToast } from '@/components/ui/toast';
 
 import {
   BankAccount,
@@ -73,9 +73,6 @@ export default function BranchDetailPage() {
   const [statusDropdownAccountId, setStatusDropdownAccountId] = useState<string | null>(null);
   const [statusChanging, setStatusChanging] = useState(false);
 
-  // Toast/notification state
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   // Search filter for accounts
   const [accountSearch, setAccountSearch] = useState('');
 
@@ -112,9 +109,9 @@ export default function BranchDetailPage() {
 
   const getToken = () => localStorage.getItem('accessToken');
 
+  // Use the global toast system (removed local dual toast)
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    globalToast(message, type);
   };
 
   const fetchBranch = useCallback(async () => {
@@ -715,14 +712,6 @@ export default function BranchDetailPage() {
 
   return (
     <Sidebar>
-      {/* Toast notification */}
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
-          toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
-        }`}>
-          {toast.message}
-        </div>
-      )}
       <div className="max-w-7xl mx-auto">
         {loading ? (
           <div className="flex items-center justify-center py-20">

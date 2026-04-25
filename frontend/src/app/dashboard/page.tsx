@@ -14,6 +14,7 @@ import {
   ShieldOff,
 } from 'lucide-react';
 import Link from 'next/link';
+import { showToast } from '@/components/ui/toast';
 import {
   BarChart,
   Bar,
@@ -80,6 +81,7 @@ const TX_TYPE_LABELS: Record<string, string> = {
   WITHDRAWAL: 'Withdrawal',
   TRANSFER: 'Transfer',
   OUT_TRANSFER: 'Out Transfer',
+  IN_TRANSFER: 'In Transfer',
 };
 
 const TX_TYPE_COLORS: Record<string, string> = {
@@ -87,6 +89,7 @@ const TX_TYPE_COLORS: Record<string, string> = {
   WITHDRAWAL: '#ef4444',
   TRANSFER: '#3b82f6',
   OUT_TRANSFER: '#f97316',
+  IN_TRANSFER: '#14b8a6',
 };
 
 const formatINR = (n: number) =>
@@ -105,14 +108,14 @@ export default function DashboardPage() {
     })
       .then((r) => r.json())
       .then((d) => setStats(d))
-      .catch(() => {})
+      .catch(() => { showToast('Failed to load dashboard data', 'error'); })
       .finally(() => setLoading(false));
     fetch(`${API}/api/auth/telegram/status`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((d) => setTelegramLinked(d.linked))
-      .catch(() => {});
+      .catch(() => { /* Telegram status is optional */ });
   }, []);
 
   if (loading) {

@@ -18,6 +18,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { showToast } from '@/components/ui/toast';
+import { handleEnterKeyNavigation } from '@/lib/form-utils';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -54,14 +55,23 @@ export default function ProfilePage() {
   const [linkPolling, setLinkPolling] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
-  const getToken = () => localStorage.getItem('accessToken') || '';
+  const getToken = () => localStorage.getItem('accessToken') ?? '';
 
   const fetchProfile = () => {
     fetch(`${API}/api/auth/profile`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return null;
+        }
+        return r.json();
+      })
       .then((d) => {
+        if (!d) return;
         setProfile(d);
         if (d.telegramLinked && linkPolling) {
           setLinkPolling(false);
@@ -263,7 +273,7 @@ export default function ProfilePage() {
               <h3 className="text-lg font-semibold text-white">Change Password</h3>
             </div>
 
-            <form onSubmit={handleChangePassword} className="space-y-4">
+            <form onSubmit={handleChangePassword} className="space-y-4" onKeyDown={handleEnterKeyNavigation}>
               {passwordError && (
                 <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                   {passwordError}

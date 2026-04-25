@@ -6,6 +6,7 @@ import {
   Receipt,
   Plus,
   Trash2,
+  Pencil,
   X,
   IndianRupee,
   Building2,
@@ -91,18 +92,41 @@ export default function ExpensesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Edit state
+  const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editReason, setEditReason] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   // Download menu
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
-  const getToken = () => localStorage.getItem('accessToken');
+  // Esc key handler for modals
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (deleteConfirmId) setDeleteConfirmId(null);
+        else if (editingExpense) setEditingExpense(null);
+        else if (showModal) setShowModal(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showModal, deleteConfirmId, editingExpense]);
+
+  const getToken = () => localStorage.getItem('accessToken') ?? '';
 
   const fetchExpenses = useCallback(async () => {
     const token = getToken();
     if (!token) { router.push('/login'); return; }
     try {
+      const params = new URLSearchParams();
+      if (filterBranchId) params.set('branchId', filterBranchId);
+      if (filterDateFrom) params.set('dateFrom', filterDateFrom);
+      if (filterDateTo) params.set('dateTo', filterDateTo);
       const url = filterBranchId
-        ? `${API}/api/expenses/branch/${filterBranchId}`
-        : `${API}/api/expenses`;
+        ? `${API}/api/expenses/branch/${filterBranchId}?${params}`
+        : `${API}/api/expenses?${params}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -114,7 +138,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, filterBranchId]);
+  }, [router, filterBranchId, filterDateFrom, filterDateTo]);
 
   const fetchBranches = useCallback(async () => {
     const token = getToken();
@@ -242,19 +266,54 @@ export default function ExpensesPage() {
     }
   };
 
-  // Apply date filters client-side
-  const filteredExpenses = expenses.filter((exp) => {
-    if (filterDateFrom) {
-      const from = new Date(filterDateFrom);
-      if (new Date(exp.createdAt) < from) return false;
+  const openEditExpense = (exp: ExpenseItem) => {
+    setEditingExpense(exp);
+    setEditAmount(String(exp.amount));
+    setEditReason(exp.reason);
+  };
+
+  const handleEditExpense = async () => {
+    if (!editingExpense) return;
+    const token = getToken();
+    if (!token) return;
+    if (!editAmount || Number(editAmount) <= 0) {
+      showToast('Please enter a valid amount', 'error');
+      return;
     }
-    if (filterDateTo) {
-      const to = new Date(filterDateTo);
-      to.setHours(23, 59, 59, 999);
-      if (new Date(exp.createdAt) > to) return false;
+    if (!editReason.trim()) {
+      showToast('Please enter a reason', 'error');
+      return;
     }
-    return true;
-  });
+    setEditSubmitting(true);
+    try {
+      const res = await fetch(`${API}/api/expenses/${editingExpense.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: Number(editAmount),
+          reason: editReason.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Failed to update expense' }));
+        throw new Error(err.message || 'Failed to update expense');
+      }
+      showToast('Expense updated successfully', 'success');
+      setEditingExpense(null);
+      fetchExpenses();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update expense';
+      showToast(msg, 'error');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  // Server-side date filtering applied via fetchExpenses
+  const filteredExpenses = expenses;
 
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -500,23 +559,14 @@ export default function ExpensesPage() {
                         {exp.createdBy.fullName}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
-                        {deleteConfirmId === exp.id ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => handleDelete(exp.id)}
-                              disabled={deleting}
-                              className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors disabled:opacity-50"
-                            >
-                              {deleting ? '...' : 'Yes'}
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="px-2 py-1 bg-slate-600 hover:bg-slate-500 text-white text-xs rounded transition-colors"
-                            >
-                              No
-                            </button>
-                          </div>
-                        ) : (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => openEditExpense(exp)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                            title="Edit expense"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
                           <button
                             onClick={() => setDeleteConfirmId(exp.id)}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -524,7 +574,7 @@ export default function ExpensesPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -695,6 +745,111 @@ export default function ExpensesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700/50 w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Delete Expense</h3>
+                <p className="text-sm text-slate-400">
+                  This will restore ₹{expenses.find((e) => e.id === deleteConfirmId)?.amount.toLocaleString('en-IN')} back to the account. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Expense Modal */}
+      {editingExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <Pencil className="h-4 w-4 text-blue-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">Edit Expense</h2>
+              </div>
+              <button
+                onClick={() => setEditingExpense(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4" onKeyDown={handleEnterKeyNavigation}>
+              <div className="text-sm text-slate-400">
+                <p>Account: <span className="text-white">{editingExpense.account.fullName}</span> ({editingExpense.account.bankName})</p>
+                <p>Branch: <span className="text-white">{editingExpense.branch.name}</span></p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Amount</label>
+                <input
+                  type="number"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  className="w-full bg-slate-700/50 text-white rounded-lg px-3 py-2.5 border border-slate-600 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm"
+                  min="0.01"
+                  step="0.01"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Reason</label>
+                <textarea
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  className="w-full bg-slate-700/50 text-white rounded-lg px-3 py-2.5 border border-slate-600 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-sm resize-none"
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setEditingExpense(null)}
+                  className="px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditExpense}
+                  disabled={editSubmitting || !editAmount || !editReason.trim()}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {editSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

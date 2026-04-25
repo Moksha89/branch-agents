@@ -93,6 +93,19 @@ export default function UsersPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Esc key handler for modals
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (deleteConfirm) setDeleteConfirm(null);
+        else if (showModal) setShowModal(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showModal, deleteConfirm]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -107,7 +120,7 @@ export default function UsersPage() {
     branchAccess: [] as BranchAccessItem[],
   });
 
-  const getToken = () => localStorage.getItem('accessToken') || '';
+  const getToken = () => localStorage.getItem('accessToken') ?? '';
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -195,6 +208,19 @@ export default function UsersPage() {
   };
 
   const handleSave = async () => {
+    // Inline validation
+    const errors: Record<string, string> = {};
+    if (!editingUser && !formData.username.trim()) errors.username = 'Username is required';
+    if (!editingUser && !formData.password) errors.password = 'Password is required';
+    if (!editingUser && formData.password.length > 0 && formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
+    if (!formData.fullName.trim()) errors.fullName = 'Full name is required';
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Invalid email address';
+    if (formData.phone && !/^\d{10}$/.test(formData.phone.replace(/\s/g, ''))) errors.phone = 'Enter a valid 10-digit phone number';
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
     setSaving(true);
     setError('');
     try {
@@ -357,7 +383,67 @@ export default function UsersPage() {
             </button>
           </div>
         ) : (
-          <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+          <>
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {users.map((user) => (
+              <div key={user.id} className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
+                      {user.fullName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium text-sm">{user.fullName}</p>
+                      <p className="text-slate-400 text-xs">@{user.username}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border ${roleColors[user.role] || roleColors.EMPLOYEE}`}>
+                      <RoleIcon role={user.role} />
+                      {user.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div>
+                    <span className="text-slate-500">Status:</span>{' '}
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${statusColors[user.status] || statusColors.ACTIVE}`}>{user.status}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Last Login:</span>{' '}
+                    <span className="text-slate-300">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Never'}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-500">Access:</span>{' '}
+                    {user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' ? (
+                      <span className="text-green-400">All Branches</span>
+                    ) : user.branchAccess.length === 0 ? (
+                      <span className="text-slate-500">No access</span>
+                    ) : (
+                      <span className="text-slate-300">{user.branchAccess.map((ba) => `${ba.branchName || ba.branchCode} (${ba.accessLevel[0]})`).join(', ')}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-700/30">
+                  <button onClick={() => openEditModal(user)} className="flex-1 py-1.5 rounded text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25">Edit</button>
+                  {user.username !== 'sarkar' && currentUserRole === 'SUPER_ADMIN' && (
+                    deleteConfirm === user.id ? (
+                      <div className="flex gap-1">
+                        <button onClick={() => handleDelete(user.id)} className="px-3 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700">Confirm</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="px-3 py-1.5 rounded text-xs font-medium bg-slate-600 text-slate-300">Cancel</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setDeleteConfirm(user.id)} className="flex-1 py-1.5 rounded text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25">Delete</button>
+                    )
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -401,7 +487,7 @@ export default function UsersPage() {
                           }`}
                         >
                           <RoleIcon role={user.role} />
-                          {user.role.replace('_', ' ')}
+                          {user.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -426,9 +512,10 @@ export default function UsersPage() {
                                 className={`px-1.5 py-0.5 rounded text-xs border ${
                                   accessColors[ba.accessLevel]
                                 }`}
-                                title={`${ba.branchName}: ${ba.accessLevel}`}
+                                title={`${ba.branchName}: ${ba.accessLevel === 'READ' ? 'View only' : ba.accessLevel === 'WRITE' ? 'View + Create/Edit' : 'Full Access (View + Create/Edit + Delete)'}`}
                               >
                                 {ba.branchCode || ba.branchName?.slice(0, 8)} ({ba.accessLevel[0]})
+
                               </span>
                             ))}
                           </div>
@@ -486,6 +573,40 @@ export default function UsersPage() {
               </table>
             </div>
           </div>
+          </>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+            <div className="bg-slate-800 rounded-xl border border-slate-700/50 w-full max-w-sm p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Delete User</h3>
+                  <p className="text-sm text-slate-400">
+                    Are you sure you want to delete <strong className="text-white">{users.find((u) => u.id === deleteConfirm)?.fullName}</strong>? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteConfirm)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Create/Edit Modal */}
@@ -510,17 +631,19 @@ export default function UsersPage() {
                 {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-slate-400 mb-1">Username</label>
+                    <label className="block text-sm text-slate-400 mb-1">Username *</label>
                     <input
                       type="text"
                       value={formData.username}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, username: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        setFormData((p) => ({ ...p, username: e.target.value }));
+                        if (formErrors.username) setFormErrors((p) => { const n = {...p}; delete n.username; return n; });
+                      }}
                       disabled={!!editingUser}
-                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm disabled:opacity-50 focus:outline-none focus:border-blue-500"
+                      className={`w-full px-3 py-2 bg-slate-700/50 border rounded-lg text-white text-sm disabled:opacity-50 focus:outline-none focus:border-blue-500 ${formErrors.username ? 'border-red-500' : 'border-slate-600/50'}`}
                       placeholder="Enter username"
                     />
+                    {formErrors.username && <p className="text-xs text-red-400 mt-1">{formErrors.username}</p>}
                   </div>
                   <div>
                     <label className="block text-sm text-slate-400 mb-1">
@@ -530,10 +653,11 @@ export default function UsersPage() {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
-                        onChange={(e) =>
-                          setFormData((p) => ({ ...p, password: e.target.value }))
-                        }
-                        className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm pr-10 focus:outline-none focus:border-blue-500"
+                        onChange={(e) => {
+                          setFormData((p) => ({ ...p, password: e.target.value }));
+                          if (formErrors.password) setFormErrors((p) => { const n = {...p}; delete n.password; return n; });
+                        }}
+                        className={`w-full px-3 py-2 bg-slate-700/50 border rounded-lg text-white text-sm pr-10 focus:outline-none focus:border-blue-500 ${formErrors.password ? 'border-red-500' : 'border-slate-600/50'}`}
                         placeholder={editingUser ? 'New password' : 'Enter password'}
                       />
                       <button
@@ -548,20 +672,23 @@ export default function UsersPage() {
                         )}
                       </button>
                     </div>
+                    {formErrors.password && <p className="text-xs text-red-400 mt-1">{formErrors.password}</p>}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Full Name</label>
+                  <label className="block text-sm text-slate-400 mb-1">Full Name *</label>
                   <input
                     type="text"
                     value={formData.fullName}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, fullName: e.target.value }))
-                    }
-                    className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                    onChange={(e) => {
+                      setFormData((p) => ({ ...p, fullName: e.target.value }));
+                      if (formErrors.fullName) setFormErrors((p) => { const n = {...p}; delete n.fullName; return n; });
+                    }}
+                    className={`w-full px-3 py-2 bg-slate-700/50 border rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 ${formErrors.fullName ? 'border-red-500' : 'border-slate-600/50'}`}
                     placeholder="Enter full name"
                   />
+                  {formErrors.fullName && <p className="text-xs text-red-400 mt-1">{formErrors.fullName}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -570,24 +697,28 @@ export default function UsersPage() {
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, email: e.target.value }))
-                      }
-                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                      onChange={(e) => {
+                        setFormData((p) => ({ ...p, email: e.target.value }));
+                        if (formErrors.email) setFormErrors((p) => { const n = {...p}; delete n.email; return n; });
+                      }}
+                      className={`w-full px-3 py-2 bg-slate-700/50 border rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 ${formErrors.email ? 'border-red-500' : 'border-slate-600/50'}`}
                       placeholder="user@example.com"
                     />
+                    {formErrors.email && <p className="text-xs text-red-400 mt-1">{formErrors.email}</p>}
                   </div>
                   <div>
                     <label className="block text-sm text-slate-400 mb-1">Phone (optional)</label>
                     <input
                       type="text"
                       value={formData.phone}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, phone: e.target.value }))
-                      }
-                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                      onChange={(e) => {
+                        setFormData((p) => ({ ...p, phone: e.target.value }));
+                        if (formErrors.phone) setFormErrors((p) => { const n = {...p}; delete n.phone; return n; });
+                      }}
+                      className={`w-full px-3 py-2 bg-slate-700/50 border rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 ${formErrors.phone ? 'border-red-500' : 'border-slate-600/50'}`}
                       placeholder="9876543210"
                     />
+                    {formErrors.phone && <p className="text-xs text-red-400 mt-1">{formErrors.phone}</p>}
                   </div>
                 </div>
 
@@ -622,7 +753,7 @@ export default function UsersPage() {
                     >
                       {ROLES.map((r) => (
                         <option key={r} value={r}>
-                          {r.replace('_', ' ')}
+                          {r.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                         </option>
                       ))}
                     </select>

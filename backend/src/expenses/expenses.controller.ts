@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -27,13 +28,21 @@ export class ExpensesController {
   }
 
   @Get()
-  async findAll(@Query('branchId') branchId?: string) {
-    return this.expensesService.findAll(branchId);
+  async findAll(
+    @Query('branchId') branchId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.expensesService.findAll(branchId, dateFrom, dateTo);
   }
 
   @Get('branch/:branchId')
-  async findByBranch(@Param('branchId') branchId: string) {
-    return this.expensesService.findByBranch(branchId);
+  async findByBranch(
+    @Param('branchId') branchId: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.expensesService.findByBranch(branchId, dateFrom, dateTo);
   }
 
   @Get('account/:accountId')
@@ -44,5 +53,13 @@ export class ExpensesController {
   @Delete(':id')
   async delete(@Param('id') id: string) {
     return this.expensesService.delete(id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() body: { amount?: number; reason?: string },
+  ) {
+    return this.expensesService.update(id, body);
   }
 }

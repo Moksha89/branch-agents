@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Landmark, RefreshCw } from 'lucide-react';
+import { Plus, Landmark, RefreshCw, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BankAccount, AccountStatus, TxType, STATUS_CONFIG } from './types';
 
@@ -147,7 +147,8 @@ export default function AccountsTab({
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden md:block rounded-xl border border-slate-700/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -216,39 +217,43 @@ export default function AccountsTab({
                       {STATUS_CONFIG[account.status].label}
                       <RefreshCw className="h-3 w-3" />
                     </button>
+                    {/* Status dropdown rendered via portal-style fixed positioning to avoid clipping */}
                     {statusDropdownAccountId === account.id && (
-                      <div
-                        className="absolute right-0 top-full mt-1 w-44 bg-slate-800 border border-slate-600 rounded-lg shadow-2xl z-40 overflow-hidden"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {(Object.keys(STATUS_CONFIG) as AccountStatus[]).map((s) => {
-                          const cfg = STATUS_CONFIG[s];
-                          const isCurrent = s === account.status;
-                          return (
-                            <button
-                              key={s}
-                              disabled={isCurrent || statusChanging}
-                              onClick={() => onStatusChange(account, s)}
-                              className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${
-                                isCurrent
-                                  ? 'bg-slate-700/50 cursor-default'
-                                  : 'hover:bg-slate-700/50 cursor-pointer'
-                              }`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                s === 'ACTIVE' ? 'bg-green-400' :
-                                s === 'DEBIT_FREEZE' ? 'bg-yellow-400' :
-                                s === 'CREDIT_FREEZE' ? 'bg-orange-400' :
-                                s === 'CYBER' ? 'bg-red-400' : 'bg-slate-400'
-                              }`} />
-                              <span className={isCurrent ? cfg.color + ' font-medium' : 'text-slate-300'}>
-                                {cfg.label}
-                              </span>
-                              {isCurrent && <span className="ml-auto text-slate-500">•</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <>
+                        <div className="fixed inset-0 z-[55]" onClick={(e) => { e.stopPropagation(); setStatusDropdownAccountId(null); }} />
+                        <div
+                          className="absolute right-0 top-full mt-1 w-44 bg-slate-800 border border-slate-600 rounded-lg shadow-2xl z-[60] overflow-hidden"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {(Object.keys(STATUS_CONFIG) as AccountStatus[]).map((s) => {
+                            const cfg = STATUS_CONFIG[s];
+                            const isCurrent = s === account.status;
+                            return (
+                              <button
+                                key={s}
+                                disabled={isCurrent || statusChanging}
+                                onClick={() => onStatusChange(account, s)}
+                                className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors ${
+                                  isCurrent
+                                    ? 'bg-slate-700/50 cursor-default'
+                                    : 'hover:bg-slate-700/50 cursor-pointer'
+                                }`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  s === 'ACTIVE' ? 'bg-green-400' :
+                                  s === 'DEBIT_FREEZE' ? 'bg-yellow-400' :
+                                  s === 'CREDIT_FREEZE' ? 'bg-orange-400' :
+                                  s === 'CYBER' ? 'bg-red-400' : 'bg-slate-400'
+                                }`} />
+                                <span className={isCurrent ? cfg.color + ' font-medium' : 'text-slate-300'}>
+                                  {cfg.label}
+                                </span>
+                                {isCurrent && <span className="ml-auto text-slate-500">•</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                   </td>
                   <td className="px-2 py-2 text-center">
@@ -280,6 +285,72 @@ export default function AccountsTab({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {filteredAccounts.map((account, idx) => (
+          <div
+            key={account.id}
+            className={`rounded-xl border border-slate-700/50 p-4 cursor-pointer hover:bg-slate-700/20 transition-colors ${
+              selectedIds.has(account.id) ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-800/30'
+            }`}
+            onClick={() => onAccountClick(account)}
+          >
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(account.id)}
+                  onChange={(e) => { e.stopPropagation(); toggleSelect(account.id); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="rounded border-slate-500 bg-slate-700 mt-0.5"
+                />
+                <div>
+                  <p className="text-white font-medium text-sm">{account.fullName}</p>
+                  <p className="text-slate-400 text-xs">{account.bankName}</p>
+                </div>
+              </div>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
+                STATUS_CONFIG[account.status].bg
+              } ${STATUS_CONFIG[account.status].color} ${STATUS_CONFIG[account.status].border}`}>
+                {STATUS_CONFIG[account.status].label}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+              <div>
+                <span className="text-slate-500">A/C:</span>{' '}
+                <span className="text-slate-300 font-mono">{account.accountNumber}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">IFSC:</span>{' '}
+                <span className="text-slate-300 font-mono">{account.ifscCode}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Mobile:</span>{' '}
+                <span className="text-slate-300">{account.mobileNumber}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Balance:</span>{' '}
+                <span className="text-green-400 font-semibold">₹{Number(account.bankBalance).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 pt-2 border-t border-slate-700/30">
+              <button
+                onClick={(e) => { e.stopPropagation(); onTxOpen(account, 'DEPOSIT'); }}
+                className="flex-1 py-1.5 rounded text-xs font-bold bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors"
+              >Deposit</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onTxOpen(account, 'WITHDRAWAL'); }}
+                className="flex-1 py-1.5 rounded text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors"
+              >Withdraw</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onTxOpen(account, 'TRANSFER'); }}
+                className="flex-1 py-1.5 rounded text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors"
+              >Transfer</button>
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );

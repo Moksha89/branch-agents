@@ -12,6 +12,8 @@ import {
   Building2,
   Hash,
   X,
+  Search,
+  MapPin,
 } from 'lucide-react';
 import Link from 'next/link';
 import { handleEnterKeyNavigation } from '@/lib/form-utils';
@@ -38,6 +40,20 @@ export default function BranchesPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [branchName, setBranchName] = useState('');
+  const [branchAddress, setBranchAddress] = useState('');
+  const [branchCity, setBranchCity] = useState('');
+  const [branchState, setBranchState] = useState('');
+  const [branchPincode, setBranchPincode] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Esc key handler for modal
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showCreate) setShowCreate(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showCreate]);
 
   const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -88,7 +104,13 @@ export default function BranchesPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: branchName }),
+        body: JSON.stringify({
+          name: branchName,
+          address: branchAddress || undefined,
+          city: branchCity || undefined,
+          state: branchState || undefined,
+          pincode: branchPincode || undefined,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -99,6 +121,10 @@ export default function BranchesPage() {
       }
       setShowCreate(false);
       setBranchName('');
+      setBranchAddress('');
+      setBranchCity('');
+      setBranchState('');
+      setBranchPincode('');
       showToast('Branch created successfully', 'success');
       await fetchBranches();
     } catch {
@@ -126,6 +152,20 @@ export default function BranchesPage() {
             New Branch
           </Button>
         </div>
+
+        {/* Search */}
+        {branches.length > 0 && (
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search branches by name or code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full max-w-md pl-10 pr-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
@@ -155,6 +195,45 @@ export default function BranchesPage() {
                     placeholder="e.g. Hyderabad Branch"
                     required
                     autoFocus
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Address</Label>
+                  <Input
+                    value={branchAddress}
+                    onChange={(e) => setBranchAddress(e.target.value)}
+                    placeholder="Street address"
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">City</Label>
+                    <Input
+                      value={branchCity}
+                      onChange={(e) => setBranchCity(e.target.value)}
+                      placeholder="City"
+                      className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">State</Label>
+                    <Input
+                      value={branchState}
+                      onChange={(e) => setBranchState(e.target.value)}
+                      placeholder="State"
+                      className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Pincode</Label>
+                  <Input
+                    value={branchPincode}
+                    onChange={(e) => setBranchPincode(e.target.value)}
+                    placeholder="6-digit pincode"
+                    maxLength={6}
                     className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                   />
                 </div>
@@ -200,7 +279,9 @@ export default function BranchesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {branches.map((branch) => (
+            {branches
+              .filter((b) => !searchQuery || b.name.toLowerCase().includes(searchQuery.toLowerCase()) || b.code.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map((branch) => (
               <Link
                 key={branch.id}
                 href={`/branches/${branch.id}`}
@@ -217,6 +298,12 @@ export default function BranchesPage() {
                 <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors mb-1">
                   {branch.name}
                 </h3>
+                {(branch.city || branch.state) && (
+                  <p className="text-xs text-slate-500 flex items-center gap-1 mb-1">
+                    <MapPin className="h-3 w-3" />
+                    {[branch.city, branch.state].filter(Boolean).join(', ')}
+                  </p>
+                )}
                 <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-3 pt-3 border-t border-slate-700/50">
                   <Hash className="h-3.5 w-3.5" />
                   {branch._count.bankAccounts} bank account{branch._count.bankAccounts !== 1 ? 's' : ''}

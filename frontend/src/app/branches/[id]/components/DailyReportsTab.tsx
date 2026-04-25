@@ -173,7 +173,77 @@ export default function DailyReportsTab({
           <p className="text-slate-500">Click &quot;Create Daily Report&quot; to add your first report</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+        <>
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-3">
+          {reports.map((report) => (
+            <div key={report.id} className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-slate-500" />
+                  <span className="text-slate-200 font-medium text-sm">
+                    {new Date(report.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                <span className={`text-sm font-bold ${report.profitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {report.profitLoss >= 0 ? '+' : ''}₹{report.profitLoss.toLocaleString('en-IN')}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-green-400" />
+                  <span className="text-slate-400">Deposit:</span>
+                  <span className="text-green-400 font-medium">₹{report.totalDeposit.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TrendingDown className="h-3 w-3 text-red-400" />
+                  <span className="text-slate-400">Withdrawal:</span>
+                  <span className="text-red-400 font-medium">₹{report.totalWithdrawal.toLocaleString('en-IN')}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Player Bal:</span>{' '}
+                  <span className="text-blue-400 font-medium">₹{report.playerBalance.toLocaleString('en-IN')}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400">By:</span>{' '}
+                  <span className="text-slate-300">{report.createdBy.fullName}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 pt-2 border-t border-slate-700/30">
+                <button
+                  onClick={() => onDownloadPNG(report.id, report.date)}
+                  disabled={downloadingPNG === report.id}
+                  className="flex-1 py-1.5 rounded text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors disabled:opacity-50"
+                >
+                  {downloadingPNG === report.id ? '...' : 'PNG'}
+                </button>
+                <button
+                  onClick={() => onEdit(report)}
+                  className="flex-1 py-1.5 rounded text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors"
+                >
+                  Edit
+                </button>
+                {confirmDeleteReportId === report.id ? (
+                  <>
+                    <button onClick={() => onDelete(report.id)} disabled={deletingReportId === report.id} className="flex-1 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                      {deletingReportId === report.id ? '...' : 'Yes'}
+                    </button>
+                    <button onClick={() => setConfirmDeleteReportId(null)} className="flex-1 py-1.5 rounded text-xs font-medium bg-slate-600 text-slate-300 hover:bg-slate-500">
+                      No
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => setConfirmDeleteReportId(report.id)} className="flex-1 py-1.5 rounded text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors">
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden md:block rounded-xl border border-slate-700/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
@@ -287,6 +357,7 @@ export default function DailyReportsTab({
             </table>
           </div>
         </div>
+        </>
       )}
     </div>
   );

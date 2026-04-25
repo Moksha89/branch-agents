@@ -143,35 +143,35 @@ export default function AccountDetailPopup({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
             {popupMode === 'view' && (
               <>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => onEdit(account)}
-                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 px-2 sm:px-3"
                 >
-                  <Pencil className="h-4 w-4 mr-1" />
-                  Edit
+                  <Pencil className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setShowTransferModal(true)}
-                  className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                  className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 px-2 sm:px-3"
                 >
-                  <ArrowRightLeft className="h-4 w-4 mr-1" />
-                  Transfer
+                  <ArrowRightLeft className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Transfer</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 sm:px-3"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
+                  <Trash2 className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
               </>
             )}

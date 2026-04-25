@@ -51,7 +51,64 @@ export default function TransactionTable({ txList, contextAccountId, onReversalC
 
   return (
     <>
-      <div className="bg-slate-800/40 rounded-xl overflow-hidden">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {txList.map((tx) => {
+          const isCredit = contextAccountId
+            ? tx.type === 'DEPOSIT' || (tx.toAccountId === contextAccountId && tx.fromAccountId !== contextAccountId)
+            : tx.type === 'DEPOSIT';
+          const isReversal = (tx as Transaction & { isReversal?: boolean }).isReversal;
+          return (
+            <div key={tx.id} className={`rounded-xl border border-slate-700/50 bg-slate-800/30 p-4 ${isReversal ? 'opacity-60' : ''}`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${txTypeBadge(tx.type)}`}>
+                  {txTypeShort(tx.type)}
+                  {isReversal && <RotateCcw className="h-3 w-3" />}
+                </span>
+                <span className={`text-sm font-semibold ${isCredit ? 'text-green-400' : 'text-red-400'}`}>
+                  {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                </span>
+              </div>
+              <div className="text-xs space-y-1 mb-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Account:</span>
+                  <span className="text-slate-300">{tx.fromAccount.fullName}{tx.toAccount ? ` → ${tx.toAccount.fullName}` : ''}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Balance After:</span>
+                  <span className="text-slate-300">₹{tx.balanceAfter.toLocaleString('en-IN')}</span>
+                </div>
+                {tx.description && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Note:</span>
+                    <span className="text-slate-300 truncate max-w-[60%]">{tx.description}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Date:</span>
+                  <span className="text-slate-500">
+                    {new Date(tx.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}{' '}
+                    {new Date(tx.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+              {!isReversal && (
+                <div className="pt-2 border-t border-slate-700/30">
+                  <button
+                    onClick={() => { setReversalTx(tx); setReversalReason(''); setReversalError(''); setReversalSuccess(''); }}
+                    className="text-xs text-slate-400 hover:text-red-400 flex items-center gap-1"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Reverse
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-slate-800/40 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

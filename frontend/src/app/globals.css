@@ -63,4 +63,10 @@
     -moz-appearance: textfield;
     appearance: textfield;
   }
+
+  /* Dark theme for native select dropdowns */
+  select option {
+    background-color: #1e293b;
+    color: #e2e8f0;
+  }
 }

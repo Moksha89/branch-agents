@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Landmark,
@@ -88,6 +88,8 @@ export default function AccountsPage() {
   const [activeTab, setActiveTab] = useState('ALL');
   const [filterBranchId, setFilterBranchId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const getToken = () => localStorage.getItem('accessToken');
 
@@ -99,7 +101,7 @@ export default function AccountsPage() {
       const params = new URLSearchParams();
       if (activeTab !== 'ALL') params.set('status', activeTab);
       if (filterBranchId) params.set('branchId', filterBranchId);
-      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
 
       const res = await fetch(`${API}/api/bank-accounts/all-accounts?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -113,7 +115,7 @@ export default function AccountsPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, activeTab, filterBranchId, searchQuery]);
+  }, [router, activeTab, filterBranchId, debouncedSearch]);
 
   const fetchBranches = useCallback(async () => {
     const token = getToken();
@@ -127,6 +129,15 @@ export default function AccountsPage() {
       setBranches(data);
     } catch { /* ignore */ }
   }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchAccounts();
