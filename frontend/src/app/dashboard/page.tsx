@@ -99,17 +99,29 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [telegramLinked, setTelegramLinked] = useState<boolean | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  useEffect(() => {
+  const fetchStats = (sd?: string, ed?: string) => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
-    fetch(`${API}/api/dashboard/stats`, {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (sd) params.set('startDate', sd);
+    if (ed) params.set('endDate', ed);
+    fetch(`${API}/api/dashboard/stats?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((d) => setStats(d))
       .catch(() => { showToast('Failed to load dashboard data', 'error'); })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchStats();
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
     fetch(`${API}/api/auth/telegram/status`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -177,9 +189,34 @@ export default function DashboardPage() {
   return (
     <Sidebar>
       <div className="w-full">
-        <div className="flex items-center gap-3 mb-6">
-          <LayoutDashboard className="h-6 w-6 text-blue-400" />
-          <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <LayoutDashboard className="h-6 w-6 text-blue-400" />
+            <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+          </div>
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); fetchStats(e.target.value, endDate); }}
+              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white"
+            />
+            <span className="text-slate-400 text-xs">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); fetchStats(startDate, e.target.value); }}
+              className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white"
+            />
+            {(startDate || endDate) && (
+              <button
+                onClick={() => { setStartDate(''); setEndDate(''); fetchStats(); }}
+                className="px-2 py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 border border-slate-700 rounded-lg"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         {/* KPI Cards */}

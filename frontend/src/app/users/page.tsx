@@ -16,10 +16,15 @@ import {
   X,
   Check,
   GitBranch,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  ChevronDown,
 } from 'lucide-react';
 import Sidebar from '@/components/layout/sidebar';
 import { handleEnterKeyNavigation } from '@/lib/form-utils';
 import { showToast } from '@/components/ui/toast';
+import { downloadPDF, downloadExcel } from '@/lib/download-utils';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -95,6 +100,7 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   // Esc key handler for modals
   useEffect(() => {
@@ -169,6 +175,25 @@ export default function UsersPage() {
     fetchUsers();
     fetchBranches();
   }, [fetchUsers, fetchBranches]);
+
+  const handleDownloadUsers = (format: 'pdf' | 'excel') => {
+    const headers = ['Name', 'Username', 'Role', 'Status', 'Email', 'Phone', 'Branches', 'Last Login', 'Created'];
+    const rows = users.map((u) => [
+      u.fullName,
+      u.username,
+      u.role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
+      u.status.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
+      u.email || '-',
+      u.phone || '-',
+      u.branchAccess?.map((ba) => ba.branchName || ba.branchCode || ba.branchId).join(', ') || '-',
+      u.lastLogin ? formatDateTimeShort(u.lastLogin) : '-',
+      formatDateTimeShort(u.createdAt),
+    ]);
+    const opts = { title: 'Users Report', filename: 'users-report', headers, rows };
+    if (format === 'pdf') downloadPDF(opts);
+    else downloadExcel(opts);
+    setShowDownloadMenu(false);
+  };
 
   const openCreateModal = () => {
     setEditingUser(null);
@@ -347,13 +372,37 @@ export default function UsersPage() {
             <Users className="h-7 w-7 text-blue-400" />
             <h2 className="text-2xl font-bold text-white">User Management</h2>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            New User
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Download Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                className="flex items-center gap-2 px-3 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Download className="h-4 w-4" /> Download <ChevronDown className="h-3 w-3" />
+              </button>
+              {showDownloadMenu && (
+                <>
+                  <div className="fixed inset-0 z-[50]" onClick={() => setShowDownloadMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[51] py-1">
+                    <button onClick={() => handleDownloadUsers('pdf')} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
+                      <FileText className="h-4 w-4 text-red-400" /> PDF
+                    </button>
+                    <button onClick={() => handleDownloadUsers('excel')} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
+                      <FileSpreadsheet className="h-4 w-4 text-green-400" /> Excel
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New User
+            </button>
+          </div>
         </div>
 
         {/* Error */}

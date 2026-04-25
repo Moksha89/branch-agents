@@ -146,4 +146,31 @@ export class BranchesService {
       }),
     };
   }
+
+  async exportData(user: JwtUser, format: string) {
+    const branchIds = this.getAccessibleBranchIds(user);
+    const where = branchIds !== null ? { id: { in: branchIds } } : {};
+
+    const branches = await this.prisma.branch.findMany({
+      where: { isActive: true, ...where },
+      include: {
+        bankAccounts: { select: { id: true, bankBalance: true, status: true, fullName: true, bankName: true } },
+      },
+    });
+
+    return branches.map((b) => ({
+      name: b.name,
+      code: b.code,
+      address: b.address || '',
+      city: b.city || '',
+      state: b.state || '',
+      pincode: b.pincode || '',
+      accountCount: b.bankAccounts.length,
+      totalBalance: b.bankAccounts.reduce((sum, a) => sum + Number(a.bankBalance), 0),
+      activeAccounts: b.bankAccounts.filter((a) => a.status === 'ACTIVE').length,
+      frozenAccounts: b.bankAccounts.filter((a) => ['DEBIT_FREEZE', 'CREDIT_FREEZE', 'CYBER'].includes(a.status)).length,
+      closedAccounts: b.bankAccounts.filter((a) => a.status === 'CLOSED').length,
+      createdAt: b.createdAt,
+    }));
+  }
 }

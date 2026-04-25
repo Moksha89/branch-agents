@@ -13,9 +13,15 @@ import {
   Menu,
   X,
   Settings,
+  Shield,
+  Monitor,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import GlobalSearch from '@/components/global-search';
+import NotificationBell from '@/components/notification-bell';
+import ThemeToggle from '@/components/theme-toggle';
+import KeyboardShortcuts from '@/components/keyboard-shortcuts';
 
 interface UserData {
   id: string;
@@ -33,6 +39,9 @@ const navItems = [
   { label: 'Accounts', href: '/accounts', icon: Landmark },
   { label: 'Expenses', href: '/expenses', icon: Receipt },
   { label: 'Users', href: '/users', icon: Users, adminOnly: true },
+  { label: 'Audit Log', href: '/audit-logs', icon: Shield, adminOnly: true },
+  { label: 'Sessions', href: '/sessions', icon: Monitor, adminOnly: true },
+  { label: 'Scheduled Reports', href: '/scheduled-reports', icon: Calendar, adminOnly: true },
 ];
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
@@ -88,8 +97,12 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-700/50">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600" />
-            <h1 className="text-lg font-semibold text-white">Systematic Web</h1>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0" />
+            <h1 className="text-lg font-semibold text-white flex-1">Systematic Web</h1>
+            <div className="hidden lg:flex items-center gap-1">
+              <NotificationBell />
+              <ThemeToggle />
+            </div>
             <button
               className="ml-auto lg:hidden text-slate-400 hover:text-white"
               onClick={() => setSidebarOpen(false)}
@@ -182,7 +195,11 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </button>
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-400 to-blue-600" />
-            <span className="text-sm font-semibold text-white">Systematic Web</span>
+            <span className="text-sm font-semibold text-white flex-1">Systematic Web</span>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <ThemeToggle />
+            </div>
           </div>
         </header>
 
@@ -191,6 +208,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <KeyboardShortcuts />
     </div>
   );
 }

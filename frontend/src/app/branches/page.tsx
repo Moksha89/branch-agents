@@ -14,10 +14,15 @@ import {
   X,
   Search,
   MapPin,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { handleEnterKeyNavigation } from '@/lib/form-utils';
 import { showToast } from '@/components/ui/toast';
+import { downloadPDF, downloadExcel } from '@/lib/download-utils';
 
 interface Branch {
   id: string;
@@ -45,6 +50,24 @@ export default function BranchesPage() {
   const [branchState, setBranchState] = useState('');
   const [branchPincode, setBranchPincode] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+
+  const handleDownloadBranches = (format: 'pdf' | 'excel') => {
+    const filtered = branches.filter((b) => !searchQuery || b.name.toLowerCase().includes(searchQuery.toLowerCase()) || b.code.toLowerCase().includes(searchQuery.toLowerCase()));
+    const headers = ['Name', 'Code', 'City', 'State', 'Accounts', 'Created'];
+    const rows = filtered.map((b) => [
+      b.name,
+      b.code,
+      b.city || '-',
+      b.state || '-',
+      b._count.bankAccounts,
+      new Date(b.createdAt).toLocaleDateString('en-IN'),
+    ]);
+    const opts = { title: 'Branches Report', filename: 'branches-report', headers, rows };
+    if (format === 'pdf') downloadPDF(opts);
+    else downloadExcel(opts);
+    setShowDownloadMenu(false);
+  };
 
   // Esc key handler for modal
   useEffect(() => {
@@ -144,13 +167,36 @@ export default function BranchesPage() {
             <GitBranch className="h-6 w-6 text-blue-400" />
             <h2 className="text-2xl font-bold text-white">Branches</h2>
           </div>
-          <Button
-            onClick={() => setShowCreate(true)}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm"
+              >
+                <Download className="h-4 w-4" /> Download <ChevronDown className="h-3 w-3" />
+              </button>
+              {showDownloadMenu && (
+                <>
+                  <div className="fixed inset-0 z-[50]" onClick={() => setShowDownloadMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[51] py-1 min-w-[140px]">
+                    <button onClick={() => handleDownloadBranches('pdf')} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
+                      <FileText className="h-4 w-4 text-red-400" /> PDF
+                    </button>
+                    <button onClick={() => handleDownloadBranches('excel')} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">
+                      <FileSpreadsheet className="h-4 w-4 text-green-400" /> Excel
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            <Button
+              onClick={() => setShowCreate(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Branch
           </Button>
+          </div>
         </div>
 
         {/* Search */}

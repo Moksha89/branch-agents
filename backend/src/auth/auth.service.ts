@@ -2,8 +2,10 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
+import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { RateLimitService } from './rate-limit.service';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/otp.dto';
 
@@ -13,19 +15,33 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private audit: AuditService,
+    private auditLog: AuditLogService,
     private prisma: PrismaService,
     private telegram: TelegramService,
+    private rateLimit: RateLimitService,
   ) {}
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, ipAddress?: string) {
+    // Check rate limit
+    const rateLimitCheck = await this.rateLimit.isRateLimited(loginDto.username, ipAddress || 'unknown');
+    if (rateLimitCheck.limited) {
+      this.audit.logAuth('LOGIN_RATE_LIMITED', loginDto.username, false, ipAddress);
+      throw new UnauthorizedException(
+        `Too many login attempts. Please try again in ${Math.ceil((rateLimitCheck.retryAfterSeconds || 900) / 60)} minutes.`
+      );
+    }
+
     const user = await this.usersService.findByUsername(loginDto.username);
 
     if (!user) {
-      this.audit.logAuth('LOGIN_FAILED', loginDto.username, false);
+      await this.rateLimit.recordAttempt(loginDto.username, ipAddress || 'unknown', false);
+      this.audit.logAuth('LOGIN_FAILED', loginDto.username, false, ipAddress);
+      await this.auditLog.log({ action: 'LOGIN_FAILED', entity: 'auth', details: { username: loginDto.username, reason: 'User not found' }, ipAddress });
       throw new UnauthorizedException('Invalid username or password');
     }
 
     if (user.status !== 'ACTIVE') {
+      await this.rateLimit.recordAttempt(loginDto.username, ipAddress || 'unknown', false);
       this.audit.logAuth('LOGIN_BLOCKED_INACTIVE', loginDto.username, false);
       throw new UnauthorizedException('Account is not active');
     }
@@ -34,7 +50,9 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
 
     if (!isPasswordValid) {
-      this.audit.logAuth('LOGIN_FAILED', loginDto.username, false);
+      await this.rateLimit.recordAttempt(loginDto.username, ipAddress || 'unknown', false);
+      this.audit.logAuth('LOGIN_FAILED', loginDto.username, false, ipAddress);
+      await this.auditLog.log({ action: 'LOGIN_FAILED', entity: 'auth', details: { username: loginDto.username, reason: 'Invalid password' }, ipAddress });
       throw new UnauthorizedException('Invalid username or password');
     }
 
@@ -72,8 +90,10 @@ export class AuthService {
     }
 
     // No 2FA — login directly
+    await this.rateLimit.clearOnSuccess(loginDto.username);
     await this.usersService.updateLastLogin(user.id);
-    this.audit.logAuth('LOGIN_SUCCESS', loginDto.username, true);
+    this.audit.logAuth('LOGIN_SUCCESS', loginDto.username, true, ipAddress);
+    await this.auditLog.log({ action: 'LOGIN_SUCCESS', entity: 'auth', userId: user.id, userName: user.fullName, ipAddress });
 
     return this.generateLoginResponse(user);
   }

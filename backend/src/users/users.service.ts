@@ -228,4 +228,36 @@ export class UsersService {
 
     return access.map((a) => a.branchId);
   }
+
+  async exportData() {
+    const users = await this.prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        lastLogin: true,
+        createdAt: true,
+        branchAccess: {
+          include: { branch: { select: { name: true } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return users.map((u) => ({
+      username: u.username,
+      fullName: u.fullName,
+      email: u.email || '',
+      phone: u.phone || '',
+      role: u.role,
+      status: u.status,
+      branches: u.branchAccess.map((ba) => ba.branch.name).join(', '),
+      lastLogin: u.lastLogin,
+      createdAt: u.createdAt,
+    }));
+  }
 }

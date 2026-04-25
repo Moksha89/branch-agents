@@ -10,6 +10,12 @@ import { Roles } from '../auth/roles.decorator';
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  @Get('export')
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  async exportUsers() {
+    return this.usersService.exportData();
+  }
+
   @Get()
   @Roles('SUPER_ADMIN', 'ADMIN')
   async findAll() {

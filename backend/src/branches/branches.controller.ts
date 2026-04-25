@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -27,6 +28,14 @@ export class BranchesController {
   @Roles('SUPER_ADMIN')
   async remove(@Param('id') id: string) {
     return this.branchesService.remove(id);
+  }
+
+  @Get('export')
+  async exportBranches(
+    @Request() req: { user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] } },
+    @Query('format') format: string,
+  ) {
+    return this.branchesService.exportData(req.user, format || 'json');
   }
 
   @Get()

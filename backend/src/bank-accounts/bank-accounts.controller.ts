@@ -138,6 +138,23 @@ export class BankAccountsController {
     return this.bankAccountsService.bulkStatusChange(body.accountIds, body.status);
   }
 
+  @Post('bulk-transfer')
+  @Roles('SUPER_ADMIN', 'ADMIN')
+  async bulkTransfer(
+    @Body() body: { accountIds: string[]; targetBranchId: string },
+  ) {
+    const results = [];
+    for (const accountId of body.accountIds) {
+      try {
+        const result = await this.bankAccountsService.transferToBranch(accountId, body.targetBranchId);
+        results.push({ accountId, success: true, result });
+      } catch (error) {
+        results.push({ accountId, success: false, error: (error as Error).message });
+      }
+    }
+    return { transferred: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length, results };
+  }
+
   @Post(':id/transfer-branch')
   @Roles('SUPER_ADMIN', 'ADMIN')
   async transferToBranch(

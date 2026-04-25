@@ -20,11 +20,18 @@ export class DashboardService {
     return user.branchAccess.map((ba) => ba.branchId);
   }
 
-  async getStats(user: JwtUser) {
+  async getStats(user: JwtUser, startDate?: string, endDate?: string) {
     const branchIds = this.getAccessibleBranchIds(user);
     const branchFilter = branchIds !== null ? { id: { in: branchIds } } : {};
     const accountFilter = branchIds !== null ? { branchId: { in: branchIds } } : {};
-    const txFilter = branchIds !== null ? { fromAccount: { branchId: { in: branchIds } } } : {};
+    const txFilter: Record<string, unknown> = branchIds !== null ? { fromAccount: { branchId: { in: branchIds } } } : {};
+
+    // Add date range filter for transactions
+    if (startDate || endDate) {
+      txFilter.createdAt = {};
+      if (startDate) (txFilter.createdAt as Record<string, unknown>).gte = new Date(startDate);
+      if (endDate) (txFilter.createdAt as Record<string, unknown>).lte = new Date(endDate + 'T23:59:59.999Z');
+    }
 
     const [
       totalBranches,
