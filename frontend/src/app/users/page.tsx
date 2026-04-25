@@ -488,7 +488,7 @@ export default function UsersPage() {
                           }`}
                         >
                           <RoleIcon role={user.role} />
-                          {user.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                          {user.role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -497,7 +497,7 @@ export default function UsersPage() {
                             statusColors[user.status] || statusColors.ACTIVE
                           }`}
                         >
-                          {user.status}
+                          {user.status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         </span>
                       </td>
                       <td className="py-3 px-4">
