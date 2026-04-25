@@ -168,6 +168,8 @@ export default function AccountsPage() {
     }
   };
 
+  const paginatedAccounts = accounts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <Sidebar>
       <div className="p-3 sm:p-4 md:p-6 lg:p-8 w-full">
@@ -309,9 +311,7 @@ export default function AccountsPage() {
                   : 'Create accounts from the Branches page'}
             </p>
           </div>
-        ) : (() => {
-          const paginatedAccounts = accounts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-          return (
+        ) : (
           <>
             {/* Desktop Table */}
             <div className="hidden md:block bg-slate-800/30 border border-slate-700/50 rounded-xl overflow-hidden">
@@ -408,8 +408,6 @@ export default function AccountsPage() {
               />
             </div>
           </>
-          );
-        })()
         )}
       </div>
     </Sidebar>
