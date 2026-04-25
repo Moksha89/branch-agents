@@ -9,6 +9,7 @@ import {
   GitBranch,
   Users,
   Receipt,
+  Landmark,
   Menu,
   X,
   Settings,
@@ -30,6 +31,7 @@ const adminRoles = ['SUPER_ADMIN', 'ADMIN'];
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Branches', href: '/branches', icon: GitBranch },
+  { label: 'Accounts', href: '/accounts', icon: Landmark },
   { label: 'Expenses', href: '/expenses', icon: Receipt },
   { label: 'Users', href: '/users', icon: Users, adminOnly: true },
 ];

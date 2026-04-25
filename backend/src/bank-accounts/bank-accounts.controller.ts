@@ -147,6 +147,16 @@ export class BankAccountsController {
     return this.bankAccountsService.transferToBranch(id, body.targetBranchId);
   }
 
+  @Get('all-accounts')
+  async findAllAccounts(
+    @Query('status') status: string,
+    @Query('branchId') branchId: string,
+    @Query('search') search: string,
+    @Request() req: { user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] } },
+  ) {
+    return this.bankAccountsService.findAllAccounts(req.user, status, branchId, search);
+  }
+
   @Get('check-duplicate')
   async checkDuplicate(@Query('accountNumber') accountNumber: string) {
     return this.bankAccountsService.checkDuplicate(accountNumber);

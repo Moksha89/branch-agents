@@ -312,6 +312,108 @@ export class BankAccountsService {
     };
   }
 
+  async findAllAccounts(user: { sub: string; role: string; branchAccess: { branchId: string; accessLevel: string }[] }, status?: string, branchId?: string, search?: string) {
+    const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
+    const accessibleBranchIds = isAdmin ? null : user.branchAccess.map((ba) => ba.branchId);
+
+    // Build where clause
+    const where: Record<string, unknown> = {};
+    if (accessibleBranchIds !== null) {
+      where.branchId = { in: accessibleBranchIds };
+    }
+    if (branchId) {
+      where.branchId = branchId;
+    }
+    if (status && status !== 'ALL') {
+      where.status = status;
+    }
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { accountNumber: { contains: search, mode: 'insensitive' } },
+        { bankName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Fetch accounts
+    const accounts = await this.prisma.bankAccount.findMany({
+      where,
+      select: {
+        id: true,
+        fullName: true,
+        bankName: true,
+        accountNumber: true,
+        bankBalance: true,
+        status: true,
+        branchId: true,
+        createdAt: true,
+        branch: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Calculate summary from ALL accessible accounts (ignore status/search filter for totals)
+    const allWhere: Record<string, unknown> = {};
+    if (accessibleBranchIds !== null) {
+      allWhere.branchId = { in: accessibleBranchIds };
+    }
+    if (branchId) {
+      allWhere.branchId = branchId;
+    }
+
+    const allAccounts = await this.prisma.bankAccount.findMany({
+      where: allWhere,
+      select: { bankBalance: true, status: true },
+    });
+
+    const summary = {
+      totalAccounts: allAccounts.length,
+      activeCount: 0,
+      debitFreezeCount: 0,
+      creditFreezeCount: 0,
+      cyberCount: 0,
+      closedCount: 0,
+      totalAvailableAmount: 0,
+      freezeAmount: 0,
+      totalBalance: 0,
+    };
+
+    for (const acc of allAccounts) {
+      const bal = Number(acc.bankBalance);
+      summary.totalBalance += bal;
+
+      switch (acc.status) {
+        case 'ACTIVE':
+          summary.activeCount++;
+          summary.totalAvailableAmount += bal;
+          break;
+        case 'DEBIT_FREEZE':
+          summary.debitFreezeCount++;
+          summary.freezeAmount += bal;
+          break;
+        case 'CREDIT_FREEZE':
+          summary.creditFreezeCount++;
+          summary.freezeAmount += bal;
+          break;
+        case 'CYBER':
+          summary.cyberCount++;
+          summary.freezeAmount += bal;
+          break;
+        case 'CLOSED':
+          summary.closedCount++;
+          break;
+      }
+    }
+
+    return {
+      accounts: accounts.map((a) => ({
+        ...a,
+        bankBalance: Number(a.bankBalance),
+      })),
+      summary,
+    };
+  }
+
   async checkDuplicate(accountNumber: string) {
     if (!accountNumber || accountNumber.trim().length < 4) {
       return { isDuplicate: false, accounts: [] };
