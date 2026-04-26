@@ -8,7 +8,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2>Hisaab</h2>
         </div>
@@ -36,6 +36,7 @@
             </a>
         </nav>
     </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     
     <div class="main-content">
         <div class="topbar">

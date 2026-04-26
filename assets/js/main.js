@@ -1,11 +1,19 @@
 $(document).ready(function() {
-    $('#menuToggle').click(function() {
-        $('.sidebar').toggleClass('active');
+    $('#menuToggle').click(function(e) {
+        e.stopPropagation();
+        $('#sidebar').toggleClass('active');
+        $('#sidebarOverlay').toggleClass('active');
+    });
+    
+    $('#sidebarOverlay').click(function() {
+        $('#sidebar').removeClass('active');
+        $('#sidebarOverlay').removeClass('active');
     });
     
     $(document).click(function(e) {
         if (!$(e.target).closest('.sidebar, #menuToggle').length) {
-            $('.sidebar').removeClass('active');
+            $('#sidebar').removeClass('active');
+            $('#sidebarOverlay').removeClass('active');
         }
     });
     

@@ -77,6 +77,18 @@ body {
     color: white;
     overflow-y: auto;
     z-index: 1000;
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
 }
 
 .sidebar-header {
@@ -118,6 +130,7 @@ body {
 .main-content {
     margin-left: var(--sidebar-width);
     min-height: 100vh;
+    transition: margin-left 0.3s ease;
 }
 
 .topbar {
@@ -139,6 +152,8 @@ body {
     border: none;
     font-size: 24px;
     cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
 }
 
 .user-info {
@@ -151,6 +166,8 @@ body {
 
 .content-wrapper {
     padding: 30px;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .page-header {
@@ -415,36 +432,216 @@ body {
 .icon-user::before { content: "👤"; }
 .icon-money::before { content: "💰"; }
 
+/* Tablet landscape / small laptop (1024px and below) */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-width: 200px;
+    }
+
+    .sidebar-header h2 {
+        font-size: 20px;
+    }
+
+    .nav-item {
+        padding: 12px 15px;
+        font-size: 13px;
+    }
+
+    .content-wrapper {
+        padding: 20px;
+    }
+
+    .page-header h1 {
+        font-size: 24px;
+    }
+
+    .stat-details h3 {
+        font-size: 24px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+}
+
+/* Tablet portrait / smaller screens (768px and below) */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
-        transition: transform 0.3s;
+        width: 250px;
     }
-    
+
     .sidebar.active {
         transform: translateX(0);
     }
-    
+
+    .sidebar.active ~ .sidebar-overlay,
+    .sidebar-overlay.active {
+        display: block;
+    }
+
     .main-content {
         margin-left: 0;
     }
-    
+
     .menu-toggle {
         display: block;
     }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
+
+    .topbar {
+        padding: 0 15px;
     }
-    
+
+    .content-wrapper {
+        padding: 15px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 15px;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+        margin-right: 12px;
+    }
+
+    .stat-details h3 {
+        font-size: 20px;
+    }
+
     .page-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 15px;
+        gap: 10px;
+        margin-bottom: 20px;
     }
-    
+
+    .page-header h1 {
+        font-size: 22px;
+    }
+
     .form-container {
         padding: 20px;
+        max-width: 100%;
+    }
+
+    .table-responsive {
+        padding: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table th,
+    .table td {
+        padding: 8px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .btn {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    .login-box {
+        padding: 25px;
+    }
+
+    .login-header h1 {
+        font-size: 26px;
+    }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+    .content-wrapper {
+        padding: 10px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .page-header h1 {
+        font-size: 20px;
+    }
+
+    .stat-details h3 {
+        font-size: 18px;
+    }
+
+    .stat-details p {
+        font-size: 12px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .login-box {
+        padding: 20px;
+    }
+
+    .login-header h1 {
+        font-size: 22px;
+    }
+}
+
+/* Ensure content fits within viewport height on all screens */
+@media (max-height: 768px) {
+    .sidebar-nav {
+        padding: 10px 0;
+    }
+
+    .nav-item {
+        padding: 10px 20px;
+    }
+
+    .sidebar-header {
+        padding: 15px;
+    }
+
+    .sidebar-header h2 {
+        font-size: 20px;
+    }
+
+    .content-wrapper {
+        padding: 15px;
+    }
+
+    .page-header {
+        margin-bottom: 15px;
+    }
+
+    .stats-grid {
+        margin-bottom: 15px;
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 12px;
+    }
+
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+
+    .stat-details h3 {
+        font-size: 22px;
     }
 }
 
