@@ -52,4 +52,61 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Remove number input spinners (up/down arrows) */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  /* Dark theme for native select dropdowns */
+  .dark select {
+    background-color: #1e293b;
+    color: #e2e8f0;
+  }
+  .dark select option {
+    background-color: #1e293b;
+    color: #e2e8f0;
+  }
+  .dark select option:checked {
+    background-color: #334155;
+  }
+
+  /* Light theme overrides */
+  .light select {
+    background-color: #ffffff;
+    color: #1e293b;
+    border-color: #cbd5e1;
+  }
+  .light select option {
+    background-color: #ffffff;
+    color: #1e293b;
+  }
+
+  /* Light theme - override dark-specific classes */
+  .light .bg-slate-900 { background-color: #f1f5f9; }
+  .light .bg-slate-800\/90 { background-color: rgba(255,255,255,0.95); }
+  .light .bg-slate-800\/50 { background-color: rgba(241,245,249,0.8); }
+  .light .bg-slate-800 { background-color: #ffffff; }
+  .light .bg-slate-700\/50 { background-color: rgba(226,232,240,0.5); }
+  .light .bg-slate-700\/30 { background-color: rgba(226,232,240,0.3); }
+  .light .bg-slate-700\/20 { background-color: rgba(226,232,240,0.2); }
+  .light .bg-slate-700 { background-color: #e2e8f0; }
+  .light .text-white { color: #0f172a; }
+  .light .text-slate-400 { color: #64748b; }
+  .light .text-slate-300 { color: #475569; }
+  .light .text-slate-500 { color: #94a3b8; }
+  .light .border-slate-700\/50 { border-color: rgba(203,213,225,0.5); }
+  .light .border-slate-700 { border-color: #cbd5e1; }
+  .light .border-slate-700\/30 { border-color: rgba(203,213,225,0.3); }
+  .light .border-slate-600 { border-color: #cbd5e1; }
+  .light .hover\:bg-slate-700\/50:hover { background-color: rgba(226,232,240,0.5); }
+  .light .hover\:text-white:hover { color: #0f172a; }
+  .light input, .light textarea { color: #0f172a; }
+  .light input::placeholder, .light textarea::placeholder { color: #94a3b8; }
 }
