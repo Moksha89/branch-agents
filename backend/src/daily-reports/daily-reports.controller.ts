@@ -17,7 +17,7 @@ export class DailyReportsController {
   ) {}
 
   @Post()
-  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER')
+  @Roles('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE')
   async create(@Body() dto: CreateDailyReportDto, @Request() req: { user: { sub: string } }) {
     return this.dailyReportsService.create(dto, req.user.sub);
   }
