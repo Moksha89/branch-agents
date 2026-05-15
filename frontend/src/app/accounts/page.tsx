@@ -12,6 +12,8 @@ import {
   XCircle,
   CheckCircle2,
   Snowflake,
+  ArrowRightLeft,
+  X,
 } from 'lucide-react';
 import Sidebar from '@/components/layout/sidebar';
 import { showToast } from '@/components/ui/toast';
@@ -94,6 +96,11 @@ export default function AccountsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25;
 
+  // Transfer modal state
+  const [transferModalAccount, setTransferModalAccount] = useState<AccountItem | null>(null);
+  const [transferTargetBranchId, setTransferTargetBranchId] = useState('');
+  const [transferring, setTransferring] = useState(false);
+
   const getToken = () => localStorage.getItem('accessToken');
 
   const fetchAccounts = useCallback(async () => {
@@ -165,6 +172,33 @@ export default function AccountsPage() {
       case 'CYBER': return summary.cyberCount;
       case 'CLOSED': return summary.closedCount;
       default: return 0;
+    }
+  };
+
+  const handleTransferBranch = async () => {
+    if (!transferModalAccount || !transferTargetBranchId) return;
+    const token = getToken();
+    if (!token) return;
+    setTransferring(true);
+    try {
+      const res = await fetch(`${API}/api/bank-accounts/${transferModalAccount.id}/transfer-branch`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetBranchId: transferTargetBranchId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Account transferred from ${data.previousBranch} to ${data.newBranch}`);
+        setTransferModalAccount(null);
+        setTransferTargetBranchId('');
+        fetchAccounts();
+      } else {
+        showToast(data.message || 'Failed to transfer account', 'error');
+      }
+    } catch {
+      showToast('Failed to transfer account', 'error');
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -325,6 +359,7 @@ export default function AccountsPage() {
                       <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Branch</th>
                       <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Balance</th>
                       <th className="text-center px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
+                      <th className="text-center px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/30">
@@ -354,6 +389,16 @@ export default function AccountsPage() {
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusColors[account.status] ?? 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
                             {statusLabels[account.status] ?? account.status}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => { setTransferModalAccount(account); setTransferTargetBranchId(''); }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+                            title="Transfer to another branch"
+                          >
+                            <ArrowRightLeft className="h-3 w-3" />
+                            Transfer
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -398,6 +443,15 @@ export default function AccountsPage() {
                       </p>
                     </div>
                   </div>
+                  <div className="pt-2 border-t border-slate-700/30">
+                    <button
+                      onClick={() => { setTransferModalAccount(account); setTransferTargetBranchId(''); }}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+                    >
+                      <ArrowRightLeft className="h-3 w-3" />
+                      Transfer to Branch
+                    </button>
+                  </div>
                 </div>
               ))}
               <Pagination
@@ -410,6 +464,72 @@ export default function AccountsPage() {
           </>
         )}
       </div>
+
+      {/* Transfer Modal */}
+      {transferModalAccount && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setTransferModalAccount(null); setTransferTargetBranchId(''); }}>
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-5 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <ArrowRightLeft className="h-4 w-4 text-amber-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Transfer Account</h3>
+              </div>
+              <button
+                onClick={() => { setTransferModalAccount(null); setTransferTargetBranchId(''); }}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <div className="mb-4 p-3 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                <p className="text-sm text-slate-300">
+                  <span className="text-white font-medium">{transferModalAccount.fullName}</span>
+                  <span className="text-slate-500"> — </span>
+                  {transferModalAccount.bankName} ({transferModalAccount.accountNumber})
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Current branch: <span className="text-amber-400 font-medium">{transferModalAccount.branch.name}</span>
+                </p>
+              </div>
+              <label className="block text-sm text-slate-300 mb-2">Select target branch</label>
+              <select
+                value={transferTargetBranchId}
+                onChange={(e) => setTransferTargetBranchId(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white mb-4 focus:outline-none focus:border-amber-500"
+              >
+                <option value="">Choose a branch...</option>
+                {branches
+                  .filter((b) => b.id !== transferModalAccount.branchId)
+                  .map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleTransferBranch}
+                  disabled={!transferTargetBranchId || transferring}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowRightLeft className="h-4 w-4" />
+                  {transferring ? 'Transferring...' : 'Confirm Transfer'}
+                </button>
+                <button
+                  onClick={() => { setTransferModalAccount(null); setTransferTargetBranchId(''); }}
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Sidebar>
   );
 }

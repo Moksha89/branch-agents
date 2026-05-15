@@ -834,6 +834,8 @@ export default function BranchDetailPage() {
                 onStatusChange={handleStatusChange}
                 onAccountClick={openViewPopup}
                 onTxOpen={openTxModal}
+                allBranches={allBranches}
+                onTransferBranch={handleTransferBranch}
               />
             )}
 
