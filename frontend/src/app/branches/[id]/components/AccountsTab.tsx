@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Landmark, RefreshCw, ChevronDown } from 'lucide-react';
+import { Plus, Landmark, RefreshCw, ChevronDown, ArrowRightLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BankAccount, AccountStatus, TxType, STATUS_CONFIG } from './types';
 
@@ -21,6 +21,8 @@ interface AccountsTabProps {
   onAccountClick: (account: BankAccount) => void;
   onTxOpen: (account: BankAccount, type: TxType) => void;
   onRefresh?: () => void;
+  allBranches?: { id: string; name: string }[];
+  onTransferBranch?: (accountId: string, targetBranchId: string) => Promise<void>;
 }
 
 export default function AccountsTab({
@@ -36,9 +38,14 @@ export default function AccountsTab({
   onAccountClick,
   onTxOpen,
   onRefresh,
+  allBranches,
+  onTransferBranch,
 }: AccountsTabProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<AccountStatus | ''>('');
+  const [transferAccount, setTransferAccount] = useState<BankAccount | null>(null);
+  const [transferTargetBranchId, setTransferTargetBranchId] = useState('');
+  const [transferring, setTransferring] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkMessage, setBulkMessage] = useState('');
 
@@ -278,6 +285,13 @@ export default function AccountsTab({
                         className="px-1.5 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-colors"
                         title="Out Transfer"
                       >OT</button>
+                      {allBranches && onTransferBranch && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setTransferAccount(account); setTransferTargetBranchId(''); }}
+                          className="px-1.5 py-1 rounded text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+                          title="Transfer to Branch"
+                        >TB</button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -348,10 +362,89 @@ export default function AccountsTab({
                 onClick={(e) => { e.stopPropagation(); onTxOpen(account, 'TRANSFER'); }}
                 className="flex-1 py-1.5 rounded text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors"
               >Transfer</button>
+              {allBranches && onTransferBranch && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setTransferAccount(account); setTransferTargetBranchId(''); }}
+                  className="flex-1 py-1.5 rounded text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors"
+                >To Branch</button>
+              )}
             </div>
           </div>
         ))}
       </div>
+
+      {/* Transfer to Branch Modal */}
+      {transferAccount && allBranches && onTransferBranch && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setTransferAccount(null); setTransferTargetBranchId(''); }}>
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-5 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <ArrowRightLeft className="h-4 w-4 text-amber-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Transfer to Branch</h3>
+              </div>
+              <button
+                onClick={() => { setTransferAccount(null); setTransferTargetBranchId(''); }}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <div className="mb-4 p-3 bg-slate-800/50 border border-slate-700/50 rounded-lg">
+                <p className="text-sm text-slate-300">
+                  <span className="text-white font-medium">{transferAccount.fullName}</span>
+                  <span className="text-slate-500"> — </span>
+                  {transferAccount.bankName} ({transferAccount.accountNumber})
+                </p>
+              </div>
+              <label className="block text-sm text-slate-300 mb-2">Select target branch</label>
+              <select
+                value={transferTargetBranchId}
+                onChange={(e) => setTransferTargetBranchId(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white mb-4 focus:outline-none focus:border-amber-500"
+              >
+                <option value="">Choose a branch...</option>
+                {allBranches
+                  .filter((b) => b.id !== branchId)
+                  .map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (!transferTargetBranchId) return;
+                    setTransferring(true);
+                    try {
+                      await onTransferBranch(transferAccount.id, transferTargetBranchId);
+                      setTransferAccount(null);
+                      setTransferTargetBranchId('');
+                    } finally {
+                      setTransferring(false);
+                    }
+                  }}
+                  disabled={!transferTargetBranchId || transferring}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowRightLeft className="h-4 w-4" />
+                  {transferring ? 'Transferring...' : 'Confirm Transfer'}
+                </button>
+                <button
+                  onClick={() => { setTransferAccount(null); setTransferTargetBranchId(''); }}
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
